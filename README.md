@@ -1,4 +1,4 @@
-# WPS "epandage"
+# WPS epandage
 ## GIS programs
 
 - GRASS-GIS 7.*
@@ -8,7 +8,7 @@
 - GDAL 
   * [Install](https://gdal.gloobe.org/install.html#linux)
 
-## Install end configure PyWPS-3.2.* Instance
+## Install and configure PyWPS-3.2.* Instance
 
 - [Installation of PyWPS](http://pywps.readthedocs.io/en/pywps-3.2/installation/index.html)
 - [Configuration](http://pywps.readthedocs.io/en/pywps-3.2/configuration/index.html#configuration)
@@ -20,7 +20,7 @@
 
 ## PyWPS & GRASS-GIS
 
-### Configure the Grass section in the [wps_config.cfg](wps_config.cfg):
+### Configure the Grass section in the "wps_config.cfg" file :
 ```
 [grass]
 path=/usr/local/grass-version/bin/:/usr/local/grass-version/scripts/:/usr/local/bin/:/usr/bin/
@@ -30,8 +30,20 @@ ldLibraryPath=/usr/local/grass-version/lib/
 You may refer to the [wps_config.cfg](wps_config.cfg) for further customization
 
 ### Configurate /usr/lib/cgi-bin/pywps.cgi as follow :
-```sh
+```shell=
+#!/bin/sh
 
+# Author: Jachym Cepicky
+# Purpose: CGI script for wrapping PyWPS script
+# Licence: GNU/GPL
+# Usage: Put this script to your web server cgi-bin directory, e.g.
+# /usr/lib/cgi-bin/ and make it executable (chmod 755 pywps.cgi)
+
+# NOTE: tested on linux/apache
+
+export PYWPS_CFG=/usr/local/wps/epandage/wps_config.cfg
+export PYWPS_PROCESSES=/usr/local/wps/epandage/wps
+export HOME=/usr/local/wps/epandage
 # Add the right python path of the used version of grass
 export PYTHONPATH=/usr/local/grass-7.*/etc/python/
 
@@ -53,20 +65,52 @@ export PYTHONPATH=/usr/local/grass-7.*/etc/python/
 ```
 
 ### WPS "epandage" usage
-Add your process "epandage" to the list of PyWPS processes
+Put the __epandage__ folder preferably on the same level of the __processes__  folder (default : __/usr/local/pywps/processes__ ). For exemple in this project is : [/usr/local/wps/epandage/wps](./wps)
 
+Be sure that the __PYWPS_PROCESSES__ variable on __"pywps.cgi"__  contains the the right directory.
+
+
+Indicate the right path to your configuration file __"epandage_process.conf"__ containing the WFS URLs and layer names to deal with.
+
+Here is an example of the configuration file __"epandage_process.conf"__ :
+
+```json=1
+{
+   "RPG_layer":{
+      "url":"http://geobretagne.fr.../wfs",
+      "name":"RPG",
+      "att_name":"ilos_id"
+   },
+   "layerList":{
+      "1":[
+         "http://geobretagne.fr..../wfs",
+         "bdtopo_cours_eau",
+         "distanceEau_7"
+      ],
+      "2":[
+         "http://geobretagne.fr..../wfs",
+         "Cadastral_Building",
+         "distanceBati"
+      ],
+      "3":[
+         "http://geobretagne.fr..../wfs",
+         "cadastre_conchylicole",
+         "distanceZC"
+      ],
+      "4":[....],
+	  
+      "8":[
+         "http://geobretagne.fr..../wfs",
+         "Vector_SLOPE_layer",
+         "slope"
+      ]
+   }
+}
 ```
-/usr/local/wps/processes/__init__.py
-```
-as follow :
+The file path (string) should be assigned to the variable named __"config_file"__ on [epandage.py](./wps/epandage.py)
 
-```py
-__all__ = ['epandage']
-```
 
-Indicate the right path to your configuration file "epandage_process.conf" contaning the WFS URL's and layer names to deal with.
-
-##### Powred by 
+##### Powred by
 [![AGROCAMPUS-OUEST](http://www.agrocampus-ouest.fr/infoglueDeliverLive/digitalAssets/89735_Logo-AGROCAMPUS-OUEST.png)](http://www.agrocampus-ouest.fr)
 
 [![Creative Commons License](https://licensebuttons.net/l/by-sa/3.0/88x31.png)](https://creativecommons.org/licenses/by-sa/4.0/)
@@ -78,3 +122,4 @@ Indicate the right path to your configuration file "epandage_process.conf" conta
 	
    [Python 2.7]: <https://www.python.org/downloads/release>
    
+
