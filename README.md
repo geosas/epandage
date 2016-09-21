@@ -109,9 +109,9 @@ Here is an example of the configuration file __"epandage_process.conf"__ :
 ```
 The file path (string) should be assigned to the variable named __"config_file"__ on [epandage.py](./wps/epandage.py)
 
-# 
-##### Powred by
-[![AGROCAMPUS-OUEST](http://www.agrocampus-ouest.fr/infoglueDeliverLive/digitalAssets/89735_Logo-AGROCAMPUS-OUEST.png)](http://www.agrocampus-ouest.fr)
+***
+#### Powred by [![AGROCAMPUS-OUEST](http://www.agrocampus-ouest.fr/infoglueDeliverLive/digitalAssets/89735_Logo-AGROCAMPUS-OUEST.png)](http://www.agrocampus-ouest.fr)
+***
 
 [![Creative Commons License](https://licensebuttons.net/l/by-sa/3.0/88x31.png)](https://creativecommons.org/licenses/by-sa/4.0/)
 
