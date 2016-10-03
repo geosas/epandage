@@ -243,8 +243,6 @@ class Process(WPSProcess):
             except:
                 print 'Timeout !'
 
-        delta = datetime.now() - stime
-        LOGGER.info('Get RPG on {0} \n'.format(delta))
         # Import data into GRASS using v.in.ogr
         self.cmd(
             "v.in.ogr --quiet -o input=%s output=parcelle" %
@@ -264,9 +262,9 @@ class Process(WPSProcess):
             (path_to_file))
 
         # area max hectars
-        area_max = 30000
+        max_area = 20000
 
-        if int(area_ha) < area_max:
+        if int(area_ha) < max_area:
             # Get geojson file extent
             bbox = self.cmd(
                 scripts_path +
@@ -344,8 +342,7 @@ class Process(WPSProcess):
 
                     bufferList.append(out_buffer)
                     j += 1
-            delta = datetime.now() - stime
-            LOGGER.info('Buffer on {0} \n'.format(delta))
+
             #########################################
             # Difference
             #########################################
@@ -523,8 +520,6 @@ class Process(WPSProcess):
                     "v.to.db --quiet map=%s columns=SPE_ha option=area unit=hectares" %
                     (final_out))
 
-                delta = datetime.now() - stime
-                LOGGER.info('Overlay on {0} \n'.format(delta))
                 #########################################
                 # Exporting
                 #########################################
@@ -575,12 +570,13 @@ class Process(WPSProcess):
 
                 # affecting output time
                 delta = datetime.now() - stime
-                temps_sec = 'Temps de traitement: {0}'.format(delta)
+                temps_sec = 'Temps de traitement: {0} \n'.format(delta)
+                LOGGER.info(temps_sec)
 
                 self.processTime.setValue(temps_sec)
 
-                delta = datetime.now() - stime
-                LOGGER.info('Export on {0} \n'.format(delta))
+
+
             # if buffer overlay completely the parcelles layer
             else:
                 # Change the variable "outputData" from ComplexOutput to
@@ -590,12 +586,14 @@ class Process(WPSProcess):
 
                 # affecting output time
                 delta = datetime.now() - stime
-                temps_sec = 'Temps de traitement: {0}'.format(delta)
+                temps_sec = 'Temps de traitement: {0} \n'.format(delta)
+                LOGGER.info(temps_sec)
 
                 self.processTime.setValue(temps_sec)
 
                 self.outputData.setValue(
                     "Il n'y a pas de zone potentiellement epandable pour vos parcelles")
+        # if the area to process is bigger to max_area (ha)
         else:
 
             # Change the variable "outputData" from ComplexOutput to
@@ -604,8 +602,8 @@ class Process(WPSProcess):
                                                     title="Message d'erreur",
                                                     type='')
             self.outputData.setValue(
-                "Le perimetre de calcule est sperrieur a " +
-                str(area_max) +
-                " ha, veillez choisir des parcelles proches les unes des autres")
+                "Le perimetre de calcule est superieur a " +
+                str(max_area) +
+                " ha, veillez choisir des parcelles plus proches les unes des autres")
 
         return

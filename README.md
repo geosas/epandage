@@ -107,6 +107,8 @@ Here is an example of the configuration file __"epandage_process.conf"__ :
    }
 }
 ```
+__NB:__ For the slope layer (number __8__ in __layerList__) to be used in the process, it should containe the value **"slope"** as 3th value.
+
 The file path (string) should be assigned to the variable named __"config_file"__ on [epandage.py](./wps/epandage.py)
 
 ***
