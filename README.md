@@ -1,4 +1,4 @@
-# WPS epandage
+# WPS epandage & zonage
 ## GIS programs
 
 - GRASS-GIS 7.*
@@ -49,8 +49,10 @@ export PYTHONPATH=/usr/local/grass-7.*/etc/python/
 
 /usr/local/bin/wps.py
 ```
- 
-## [Python 2.7] required modules (2.6 is compatible but deprecated)
+
+## For WPS "epandage"
+
+### [Python 2.7] required modules (2.6 is compatible but deprecated)
 ```
 - grass.script
 - time
@@ -62,6 +64,7 @@ export PYTHONPATH=/usr/local/grass-7.*/etc/python/
 - argparse
 - owslib
 - geojson
+- logging
 ```
 
 ### WPS "epandage" usage
@@ -100,7 +103,7 @@ Here is an example of the configuration file __"epandage_process.conf"__ :
       "4":[....],
 	  
       "8":[
-         "http://geobretagne.fr..../wfs",
+         "http://geowww.agrocampus-ouest.fr..../wfs",
          "Vector_SLOPE_layer",
          "slope"
       ]
@@ -111,10 +114,30 @@ __NB:__ For the slope layer (number __8__ in __layerList__) to be used in the pr
 
 The file path (string) should be assigned to the variable named __"config_file"__ on [epandage.py](./wps/epandage.py)
 
-***
-#### Powred by [![AGROCAMPUS-OUEST](http://www.agrocampus-ouest.fr/infoglueDeliverLive/digitalAssets/89735_Logo-AGROCAMPUS-OUEST.png)](http://www.agrocampus-ouest.fr)
-***
+## For WPS zonage
+This service allows the generation of the slopes zoning vector layer to be used later in the "epandage" WPS service.
+Note: The output layer will automatically be exported on the indicated postgis database.
+THe default database is "epandage" (on geowww server) and the table is named "zonage_pente_bretagne".
+This table is published on geoserver with the following referances:
+__URL__: http://geowww.agrocampus-ouest.fr/geoserver/epandage/ows,
+__name__: zonage_pente_bretagne
+__NB__ : When the WPS "zoning" is executed, using the default postgis database, it will overwrite the existing table (itself linked to the geoserver layer).
+### [Python 2.7] required modules (2.6 is compatible but deprecated)
+```
+- os
+- time
+- datetime
+- shutil
+- logging
+```
 
+
+
+
+
+***
+##### Powred by [![AGROCAMPUS-OUEST](http://www.agrocampus-ouest.fr/infoglueDeliverLive/digitalAssets/89735_Logo-AGROCAMPUS-OUEST.png)](http://www.agrocampus-ouest.fr)
+***
 [![Creative Commons License](https://licensebuttons.net/l/by-sa/3.0/88x31.png)](https://creativecommons.org/licenses/by-sa/4.0/)
 
 
