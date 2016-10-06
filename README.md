@@ -119,8 +119,9 @@ This service allows the generation of the slopes zoning vector layer to be used 
 Note: The output layer will automatically be exported on the indicated postgis database.
 THe default database is "epandage" (on geowww server) and the table is named "zonage_pente_bretagne".
 This table is published on geoserver with the following referances:
-__URL__: http://geowww.agrocampus-ouest.fr/geoserver/epandage/ows,
+__URL__: http://geowww.agrocampus-ouest.fr/geoserver/epandage/ows
 __name__: zonage_pente_bretagne
+
 __NB__ : When the WPS "zoning" is executed, using the default postgis database, it will overwrite the existing table (itself linked to the geoserver layer).
 ### [Python 2.7] required modules (2.6 is compatible but deprecated)
 ```
