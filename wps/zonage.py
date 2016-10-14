@@ -4,6 +4,7 @@ import os
 import shutil
 import time
 import logging
+import requests
 
 
 class Process(WPSProcess):
@@ -117,25 +118,35 @@ class Process(WPSProcess):
 
         self.password = self.addLiteralInput(
             identifier="password",
-            title="Mot de passe",
+            title="Mot de passe postgres",
+            type="")
+
+        self.geoserver_user = self.addLiteralInput(
+            identifier="geoserver_user",
+            title="Nom d'utilisateur geoserver",
+            type="")
+
+        self.geoserver_pass = self.addLiteralInput(
+            identifier="geoserver_pass",
+            title="Mot de passe geoserver",
+            type="")
+
+        self.email = self.addLiteralInput(
+            identifier="email",
+            title='Adresse(s) e-mail pour etre prevenus a la fin du traitement.\
+             (separer par virgule "," si plusieurs)',
+            minOccurs=0,
             type="")
 
         self.outputSrs = self.addLiteralInput(
             identifier="outputSrs",
-            title="EPSG de la couche en sortie",
+            title="EPSG de la couche en sortie et publiee",
             allowedValues=[
                 'EPSG:2154',
                 'EPSG:3857',
                 'EPSG:4326'],
             default="EPSG:2154",
             type="")
-
-        #######################################################################
-        # Outputs
-        #######################################################################
-        self.processTime = self.addLiteralOutput(identifier="processTime",
-                                                 title="Temps de traitement",
-                                                 type="")
 
     def execute(self):
 
@@ -155,6 +166,14 @@ class Process(WPSProcess):
         # File indecating the classes and layers directory
         layers_path = '/home/saadni/layers_pentes/'
 
+        # Point to the folder 'scripts' (two folders above 'zonage.py')
+        current_path = os.path.realpath(__file__)
+        scripts_path = os.path.abspath(
+            os.path.join(
+                current_path,
+                '..',
+                '..',
+                'scripts')) + '/'
 
         RH_path = layers_path + self.getInputValue('RH_layer')
         SurfaceEau_path = layers_path + self.getInputValue('SurfaceEau_layer')
@@ -369,13 +388,16 @@ class Process(WPSProcess):
         dbname = self.getInputValue('dbname')
         user = self.getInputValue('user')
         password = self.getInputValue('password')
+        layers_name_out =  'zonage_pente_bretagne'
 
+        geoserver_login = self.getInputValue('geoserver_user')
+        geoserver_pass = self.getInputValue('geoserver_pass')
         # Concatinate database server informations
         pgsql = 'PostgreSQL PG:"host={0} port={1} dbname={2}\
         password={3} user={4}"'.format(host, port, dbname, password, user)
 
         # Concatinate the command ogr2ogr to dump the output shapefile to the database
-        command = 'ogr2ogr -overwrite -progress --config PG_USE_COPY YES -f {0} {1} -nlt MULTIPOLYGON -lco SCHEMA=public -lco GEOMETRY_NAME=geom -lco FID=id -nln zonage_pente_bretagne -s_srs EPSG:2154 -t_srs {2}'.format(pgsql, shape_out, outputSrs)
+        command = 'ogr2ogr -overwrite -progress --config PG_USE_COPY YES -f {0} {1} -nlt MULTIPOLYGON -lco SCHEMA=public -lco GEOMETRY_NAME=geom -lco FID=id -nln {2} -s_srs EPSG:2154 -t_srs {3}'.format(pgsql, shape_out, layers_name_out, outputSrs)
 
         p = os.popen(command,"r").readline()
 
@@ -383,6 +405,25 @@ class Process(WPSProcess):
 
         delta = datetime.now() - stime_process
         LOGGER.info('Dump shapefile to postgis on : {0} \n'.format(delta))
+
+        # configurate the request header and autentification
+        headers = {'Content-type': 'text/xml',}
+
+        auth=requests.auth.HTTPBasicAuth(geoserver_login, geoserver_pass)
+
+
+        # Update datastore
+        url = 'http://geoxxx.agrocampus-ouest.fr/geoserver/rest/workspaces/epandage/datastores/{0}'.format(layers_name_out)
+        datastore = "<dataStore><enabled>true</enabled><update>overwrite</update></dataStore>"
+
+        requests.put(url=url, headers=headers, data=datastore, auth=auth)
+
+        # Change the Native and the Declared SRS of the published layer on geoserver as the outputSrs
+        url = 'http://geoxxx.agrocampus-ouest.fr/geoserver/rest/workspaces/epandage/datastores/{0}/featuretypes/{0}?recalculate=nativebbox,latlonbbox'.format(layers_name_out)
+
+        data_feature = '<featureType><enabled>true</enabled><nativeCRS>{0}</nativeCRS><srs>{0}</srs><projectionPolicy>FORCE_DECLARED</projectionPolicy></featureType>'.format(outputSrs)
+
+        requests.put(url=url, headers=headers, data=data_feature, auth=auth)
 
         if self.getInputValue('supprimer'):
             if os.path.exists(dir_out):
@@ -392,7 +433,10 @@ class Process(WPSProcess):
         temps_sec = 'Total processing time: {0} \n'.format(delta)
         LOGGER.info(temps_sec)
 
-        # set outputs
-        self.processTime.setValue(temps_sec)
+        # Send mail
+        email = self.getInputValue('email')
+
+        if email is not None:
+          self.cmd(scripts_path + "mailSender.sh %s %s" % (email, delta))
 
         return
