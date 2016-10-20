@@ -413,13 +413,13 @@ class Process(WPSProcess):
 
 
         # Update datastore
-        url = 'http://geoxxx.agrocampus-ouest.fr/geoserver/rest/workspaces/epandage/datastores/{0}'.format(layers_name_out)
+        url = 'http://geowww.agrocampus-ouest.fr/geoserver/rest/workspaces/epandage/datastores/{0}'.format(layers_name_out)
         datastore = "<dataStore><enabled>true</enabled><update>overwrite</update></dataStore>"
 
         requests.put(url=url, headers=headers, data=datastore, auth=auth)
 
         # Change the Native and the Declared SRS of the published layer on geoserver as the outputSrs
-        url = 'http://geoxxx.agrocampus-ouest.fr/geoserver/rest/workspaces/epandage/datastores/{0}/featuretypes/{0}?recalculate=nativebbox,latlonbbox'.format(layers_name_out)
+        url = 'http://geowww.agrocampus-ouest.fr/geoserver/rest/workspaces/epandage/datastores/{0}/featuretypes/{0}?recalculate=nativebbox,latlonbbox'.format(layers_name_out)
 
         data_feature = '<featureType><enabled>true</enabled><nativeCRS>{0}</nativeCRS><srs>{0}</srs><projectionPolicy>FORCE_DECLARED</projectionPolicy></featureType>'.format(outputSrs)
 
