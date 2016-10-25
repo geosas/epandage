@@ -71,8 +71,6 @@ def GetWFSLayerFilter(u, n, p, a, fe, s):
         fr = fes.FilterRequest()
         filter_fes = fr.setConstraintList(filterList, tostring=True)
 
-        print('\n' + '{0}'.format(datetime.now()))
-
         # Get the vector layer using OGC WFS standard vrsion 1.0.0
         wfs = WebFeatureService(u, version='1.0.0', timeout=10)
         # Supported outputFormat : GML2, GML3, shape-zip, application/json
@@ -81,9 +79,6 @@ def GetWFSLayerFilter(u, n, p, a, fe, s):
             filter=filter_fes,
             outputFormat="application/json",
             srsname=s)  # maxfeatures=200)
-
-        print('Downloading : ' + n)
-        print("From: " + u)
 
         # Download the zipped shapefile
         data = getFeature.read()
@@ -94,7 +89,7 @@ def GetWFSLayerFilter(u, n, p, a, fe, s):
     # Calculat time
     delta = datetime.now() - start
 
-    print "Done ! \n Download time : {0}".format(delta)
+    print "\n{0} Downloaded on : {1}\n".format(n, delta)
 
     return
 

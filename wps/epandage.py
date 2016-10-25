@@ -33,7 +33,7 @@ class Process(WPSProcess):
         #######################################################################
         self.parcelList = self.addLiteralInput(identifier="parcelList",
                                                title="Identifiant(s) de(s) parcelle(s) - attributs 'ilot_cdn' (separateur: virgule)",
-                                               default="361664,361665,361666,361667,361669",
+                                               default="361664", #,361665,361666,361667,361669",
                                                type="",
                                                minOccurs=1)
 
@@ -48,6 +48,7 @@ class Process(WPSProcess):
         self.distanceEau_7 = self.addLiteralInput(
             identifier="distanceEau_7",
             title="Distance minimale (m) du cours d'eau",
+            default="35",
             allowedValues=['35'],
             type="")
 
@@ -63,6 +64,7 @@ class Process(WPSProcess):
         self.distanceEau_15 = self.addLiteralInput(
             identifier="distanceEau_15",
             title="Distance minimale (m) du cours d'eau",
+            default="100",
             allowedValues=['100'],
             type="")
 
@@ -179,7 +181,7 @@ class Process(WPSProcess):
 
         # Delete all file in /tmp/epandage directory older than n_days
         now = time.time()
-        n_days = 3
+        n_days = 0
         cutoff = now - (n_days * 86400)
         files = os.listdir(tmp_dir)
         for xfile in files:
@@ -348,9 +350,10 @@ class Process(WPSProcess):
             #########################################
             overlayList = []
             i = 0
-            for inputs in bufferList:
-                outDiff = inputs + 'Diff' + str(i)
-                try:
+            try:
+                for inputs in bufferList:
+                    outDiff = inputs + 'Diff' + str(i)
+                    # make the first overlay for the first buffer 'data00'
                     if inputs == 'data00':
                         overlayList.append(outDiff)
                         # v.overlay - Overlays two vector maps - not: features
@@ -358,6 +361,7 @@ class Process(WPSProcess):
                         self.cmd(
                             "v.overlay --quiet ainput=parcelle binput=%s operator=not output=%s olayer=0,1,0" %
                             (inputs, overlayList[i]))
+                    # make the other overlay for the result of the first buffer
                     else:
                         i += 1
                         outDiff = inputs + 'Diff' + str(i)
@@ -366,11 +370,16 @@ class Process(WPSProcess):
                         # from ainput not overlayed by features from binput
                         self.cmd(
                             "v.overlay --quiet ainput=%s binput=%s operator=not output=%s olayer=0,1,0" %
-                            (overlayList[
-                                i - 1], inputs, overlayList[i]))
-                        final_out = overlayList[i]
-                except:
-                    final_out = None
+                            (overlayList[i - 1], inputs, overlayList[i]))
+                # Put the right value on final_out
+                if len(bufferList) == 0:
+                    final_out = 'parcelle'
+                elif len(bufferList) == 1:
+                    final_out = overlayList[0]
+                else:
+                    final_out = overlayList[i]
+            except:
+                final_out = None
 
             # if buffer do not overlay completely the parcelles layer (layerOut
             # exist)

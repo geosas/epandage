@@ -71,15 +71,15 @@ def GetWFSLayerBbox(u, n, p, b, off, s):
 
     # add offset of 500m
     if off:
-        box = (bbox[0] - off, bbox[1] - off,
-               bbox[2] + off, bbox[3] + off)
+        offset = 500
+        box = (bbox[0] - offset, bbox[1] - offset,
+               bbox[2] + offset, bbox[3] + offset)
     else:
         box = bbox
 
     chemin = p
 
     if not exists(chemin):
-        print('\n' + '{0}'.format(datetime.now()))
         # Get the vector layer using OGC WFS standard vrsion 1.0.0
         wfs = WebFeatureService(u, version='1.0.0', timeout=10)
 
@@ -92,9 +92,6 @@ def GetWFSLayerBbox(u, n, p, b, off, s):
             bbox=box,
             srsname=s)  # maxfeatures=200
 
-        print('Downloading : ' + n)
-        print("From: " + u)
-
         # Download the zipped shapefile
         data = getFeature.read()
         f = open(chemin, 'wb')
@@ -104,7 +101,7 @@ def GetWFSLayerBbox(u, n, p, b, off, s):
     # Calculat time
     delta = datetime.now() - start
 
-    print "Done ! \n Download time : {0}".format(delta)
+    print "\n{0} Downloaded on : {1}\n".format(n, delta)
 
     return
 
