@@ -5,18 +5,18 @@ Created on Thu Apr 25 10:00:02 2016
 
 @author: Mounirsky
 
-This driver is used to download vector layer (limited to a specified BoundingBox) from a WFS stream using OWSLib python library.
+This driver is used to download vector layer (limited to a specified BoundingBox) from a WFS stream using requests python library.
 
 """
 
 from os.path import exists
 from datetime import datetime
 import argparse
-from owslib.wfs import WebFeatureService
+import requests
 
 parser = argparse.ArgumentParser(
-    description="GetWFSLayer_bbox +o <Offset(Optionel)> +u <WFS_URL> +n <TypeName> +p <PATH> +b <BBox>",
-    prog='./GetGeojsonBbox.py',
+    description="GetWFSLayerBbox_REST +o <Offset(Optionel)> +u <WFS_URL> +n <TypeName> +p <PATH> +b <BBox>",
+    prog='./GetWFSLayerBbox_REST.py',
     prefix_chars='+')
 
 parser.add_argument(
@@ -25,22 +25,27 @@ parser.add_argument(
     help='Optionel flag -o: BoundingBox offset by 500m')
 parser.add_argument(
     '+u',
+    type=str,
     required=True,
     help='WFS URL - Required - (Usage : +u URL)')
 parser.add_argument(
     '+n',
+    type=str,
     required=True,
     help='layer typename - Required - (Usage : +n typeName)')
 parser.add_argument(
     '+p',
+    type=str,
     required=True,
-    help='Downloading directory/filename - (Usage : +p /tmp/filename)')
+    help='Downloading directory - (Usage : +p /tmp)')
 parser.add_argument(
     '+b',
+    type=str,
     required=False,
     help="BoundingBox (Usage : +b 'xmin,ymin,xmax,ymax' )")
 parser.add_argument(
     '+srs',
+    type=str,
     required=False,
     default='EPSG:2154',
     help="EPSG code to request the data in - Default: EPSG:2154 (Usage : -srs EPSG:code')")
@@ -53,6 +58,7 @@ BBox = args['b']
 path = args['p']
 srs = args['srs']
 
+# if +o argument is added
 if args['o']:
     offset = True
 else:
@@ -62,46 +68,57 @@ else:
 # GetWFSLayer function
 # --------------------------------------------------------------
 
+#u = 'http://geowww.agrocampus-ouest.fr/geoserver/epandage/wfs'
+#n = 'zonage_pente_bretagne'
+#b = '251668.437447,6786461.36502,252656.643096,6787198.46528'
+#s = 'EPSG:2154'
+#off = True
 
-def GetWFSLayerBbox(u, n, p, b, off, s):
+def GetWFSLayerBbox_REST(u, n, p, b, off, s):
     start = datetime.now()
-
+    # string bbox to list of strings bbox
     bb = b.split(",")
-    bbox = tuple([float(xy) for xy in bb])
+    # list of strings bbox to list of float
+    bboxx = [float(i) for i in bb]
 
-    # add offset of 500m
+    # add offset of 500m if +o argument is added
     if off:
         offset = 500
-        box = (bbox[0] - offset, bbox[1] - offset,
-               bbox[2] + offset, bbox[3] + offset)
+        bbox = ','.join([str(bboxx[0] - offset),
+                str(bboxx[1] - offset),
+                str(bboxx[2] + offset),
+                str(bboxx[3] + offset)
+                ])
     else:
-        box = bbox
+        bbox = b
 
     chemin = p
 
     if not exists(chemin):
-        # Get the vector layer using OGC WFS standard vrsion 1.0.0
-        wfs = WebFeatureService(u, version='1.0.0', timeout=10)
+        # configurate the request parameters
+        param = {
+            'Service':'WFS',
+            'Version':'2.0.0',
+            'Request':'GetFeature',
+            'typeName':n,
+            'bbox':bbox,
+            'srsName':s,
+            'outputFormat':'application/json'
+        }
 
-        # Supported outputFormat : GML2, GML3, shape-zip, application/json
-        getFeature = wfs.getfeature(
-            typename=(
-                n,
-            ),
-            outputFormat="application/json",
-            bbox=box,
-            srsname=s)  # maxfeatures=200
+        # Do the GET request
+        r = requests.get(url=u, params=param, timeout=10)
 
         # Download the zipped shapefile
-        data = getFeature.read()
+        data = r.content
         f = open(chemin, 'wb')
         f.write(data)
         f.close()
 
-    # Calculat time
-    delta = datetime.now() - start
+        # Calculat time
+        delta = datetime.now() - start
 
-    print "\n{0} Downloaded on : {1}\n".format(n, delta)
+        print "\n{0} Downloaded on : {1}\n".format(n, delta)
 
     return
 
@@ -109,4 +126,5 @@ def GetWFSLayerBbox(u, n, p, b, off, s):
 # II - Execute function
 # --------------------------------------------------------------
 if __name__ == '__main__':
-    GetWFSLayerBbox(URL, name, path, BBox, offset, srs)
+    GetWFSLayerBbox_REST(URL, name, path, BBox, offset, srs)
+

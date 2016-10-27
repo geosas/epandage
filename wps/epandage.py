@@ -33,7 +33,7 @@ class Process(WPSProcess):
         #######################################################################
         self.parcelList = self.addLiteralInput(identifier="parcelList",
                                                title="Identifiant(s) de(s) parcelle(s) - attributs 'ilot_cdn' (separateur: virgule)",
-                                               default="361664", #,361665,361666,361667,361669",
+                                               default="361664,361665,361666,361667,361669",
                                                type="",
                                                minOccurs=1)
 
@@ -301,11 +301,11 @@ class Process(WPSProcess):
                         # Download layer using WFS Bonding box filter and add
                         # offset of 500m (flag '+o')
                         self.cmd(
-                            scripts_path + "GetWFSLayer_bbox.py +u %s +n %s +p %s +b %s +o" %
+                            scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +p %s +b %s +o" %
                             (url, name, pathName, bbox))
                         break
                     except:
-                        print 'Timeout !'
+                        LOGGER.info('GetWFSLayer_bbox {0} Request Error !'.format(name))
 
                 # Test si le ficher vecteur n'est pas vide
                 with open(pathName) as data_file:
@@ -586,7 +586,7 @@ class Process(WPSProcess):
 
 
 
-            # if buffer overlay completely the parcelles layer
+            # if buffer overlay completely the parcelles layer (if final_out is None)
             else:
                 # Change the variable "outputData" from ComplexOutput to
                 # LiteralOutput
