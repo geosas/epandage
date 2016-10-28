@@ -5,51 +5,64 @@ Created on Thu Apr 25 10:00:02 2016
 
 @author: Mounirsky
 
-This driver is used to download vector layer (limited to a specified BoundingBox) from a WFS stream using requests python library.
+This driver is used to download the filtred attributes of a vector layer from a WFS stream using requests and OWSLib python library.
 
 """
 
 from os.path import exists
 from datetime import datetime
 import argparse
+from owslib import fes
 import requests
 
 parser = argparse.ArgumentParser(
-    description="GetWFSLayerBbox_REST +o +u <WFS_URL> +n <TypeName> +d <Output directory> +b <BBox> +srs <EPSG:code (Default: EPSG:2154)>",
-    prog='./GetWFSLayerBbox_REST.py',
-    prefix_chars='+')
+    description="GetWFSLayer_filter_REST.py -l <login> -p <password> -u <WFS_URL> -n <TypeName> -d <Output directory> -a <Field name> -f <'value1,value2,...'> -srs <EPSG:code (Default: EPSG:2154)>",
+    prog='./GetWFSLayer_filter_REST.py')
 
 requiredNamed = parser.add_argument_group('required arguments')
 
 parser.add_argument(
-    '+o',
-    action="store_true",
-    help='Optionel flag -o: BoundingBox offset by 500m')
+   '-l',
+    metavar='LOGIN',
+    type=str,
+    help='WFS stream login')
+parser.add_argument(
+    '-p',
+    metavar='PASSWORD',
+    type=str,
+    help='WFS stream password')
 requiredNamed.add_argument(
-    '+u',
+    '-u',
     metavar='URL',
     type=str,
     required=True,
     help='WFS URL')
 requiredNamed.add_argument(
-    '+n',
+    '-n',
     metavar='typename',
     type=str,
     required=True,
     help='layer typename')
 requiredNamed.add_argument(
-    '+d',
+    '-d',
     metavar='OUTPUT_DIR',
     type=str,
     required=True,
     help='Output directory')
-parser.add_argument(
-    '+b',
+requiredNamed.add_argument(
+    '-a',
+    metavar='Field_name attributes',
     type=str,
-    required=False,
-    help="BoundingBox (Usage : +b 'xmin,ymin,xmax,ymax' )")
+    required=True,
+    help="Field name")
+requiredNamed.add_argument(
+    '-f',
+    metavar="'value1, value2,...'",
+    type=str,
+    required=True,
+    help="Features values to be used for filter")
 parser.add_argument(
-    '+srs',
+    '-srs',
     metavar='EPSG:code',
     type=str,
     required=False,
@@ -58,57 +71,48 @@ parser.add_argument(
 
 args = vars(parser.parse_args())
 
+login = args['l']
+password = args['p']
 URL = args['u']
 name = args['n']
-BBox = args['b']
 path = args['d']
+att_name = args['a']
+fe = args['f']
 srs = args['srs']
-
-# if +o argument is added
-if args['o']:
-    offset = True
-else:
-    offset = False
 
 # --------------------------------------------------------------
 # GetWFSLayer function
 # --------------------------------------------------------------
 
-def GetWFSLayerBbox_REST(u, n, d, b, off, s):
+def GetWFSLayer_filter_REST(login, password, u, n, d, a, fe, s):
     start = datetime.now()
-    # string bbox to list of strings bbox
-    bb = b.split(",")
-    # list of strings bbox to list of float
-    bboxx = [float(i) for i in bb]
-
-    # add offset of 500m if +o argument is added
-    if off:
-        offset = 500
-        bbox = ','.join([str(bboxx[0] - offset),
-                str(bboxx[1] - offset),
-                str(bboxx[2] + offset),
-                str(bboxx[3] + offset)
-                ])
-    else:
-        bbox = b
-
+    idList = fe.split(",")
     chemin = d
 
     if not exists(chemin):
+        filterList = [fes.PropertyIsEqualTo(att_name, i) for i in idList]
+        fr = fes.FilterRequest()
+        filter_fes = fr.setConstraintList(filterList, tostring=True)
+
+        if login and password:
+            print 'Pass OK'
+            # configurate the request authentification
+            auth=requests.auth.HTTPBasicAuth(login, password)
+        else:
+            print 'No pass'
+            auth=None
         # configurate the request parameters
         param = {
             'Service':'WFS',
             'Version':'2.0.0',
             'Request':'GetFeature',
             'typeName':n,
-            'bbox':bbox,
+            'filter':filter_fes,
             'srsName':s,
             'outputFormat':'application/json'
         }
-
         # Do the GET request
-        r = requests.get(url=u, params=param, timeout=10)
-
+        r = requests.get(url=u, params=param, auth=auth, timeout=10)
         # Download the zipped shapefile
         data = r.content
         f = open(chemin, 'wb')
@@ -117,14 +121,21 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
 
         # Calculat time
         delta = datetime.now() - start
-
         print "\n{0} Downloaded on : {1}\n".format(n, delta)
-
+    else:
+        print "\n{0} exsists\n".format(n)
     return
 
 # --------------------------------------------------------------
 # II - Execute function
 # --------------------------------------------------------------
 if __name__ == '__main__':
-    GetWFSLayerBbox_REST(URL, name, path, BBox, offset, srs)
+    GetWFSLayer_filter_REST(login, password, URL, name, path, att_name, fe, srs)
+
+
+
+
+
+
+
 

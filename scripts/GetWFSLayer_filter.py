@@ -16,40 +16,54 @@ from owslib.wfs import WebFeatureService
 from owslib import fes
 
 parser = argparse.ArgumentParser(
-    description="GetWFSLayer_filter.py -u <WFS_URL> -n <TypeName> -p <PATH (Default:/tmp/)> -a <Attribute name> -f <'String,...'> -srs <EPSG:code (Default: EPSG:2154)>",
-    prog='./GetWFSLayer_filter.py')
+    description="GetWFSLayer_filter_REST.py -l <login> -pass <password> -u <WFS_URL> -n <TypeName> -p <Output directory> -a <Field name> -f <'value1,value2,...'> -srs <EPSG:code (Default: EPSG:2154)>",
+    prog='./GetWFSLayer_filter_REST.py')
 
-parser.add_argument(
+requiredNamed = parser.add_argument_group('required arguments')
+
+requiredNamed.add_argument(
     '-u',
+    metavar='URL',
+    type=str,
     required=True,
-    help='WFS URL - Required - (Usage : -u URL)')
-parser.add_argument(
+    help='WFS URL')
+requiredNamed.add_argument(
     '-n',
+    metavar='typename',
+    type=str,
     required=True,
-    help='layer typename - Required - (Usage : -n typeName)')
-parser.add_argument(
-    '-p',
+    help='layer typename')
+requiredNamed.add_argument(
+    '-d',
+    metavar='OUTPUT_DIR',
+    type=str,
     required=True,
-    help='Downloading directory/filename - (Usage : -p /tmp/filename)')
-parser.add_argument(
+    help='Output directory')
+requiredNamed.add_argument(
     '-a',
+    metavar='Field_name attributes',
+    type=str,
     required=True,
-    help="Attribut name (Usage : -a Num_ilot )")
-parser.add_argument(
+    help="Field name")
+requiredNamed.add_argument(
     '-f',
+    metavar="'value1, value2,...'",
+    type=str,
     required=True,
-    help="Filter features by attribute values (Usage : -f 'Literal1, Literal2,...')")
+    help="Features values to be used for filter")
 parser.add_argument(
     '-srs',
+    metavar='EPSG:code',
+    type=str,
     required=False,
     default='EPSG:2154',
-    help="EPSG code to request the data in - Default: EPSG:2154 (Usage : -srs EPSG code')")
+    help="EPSG code of the request layer - Default: EPSG:2154")
 
 args = vars(parser.parse_args())
 
 URL = args['u']
 name = args['n']
-path = args['p']
+path = args['d']
 att_name = args['a']
 fe = args['f']
 srs = args['srs']
@@ -59,12 +73,12 @@ srs = args['srs']
 # --------------------------------------------------------------
 
 
-def GetWFSLayerFilter(u, n, p, a, fe, s):
+def GetWFSLayerFilter(u, n, d, a, fe, s):
     start = datetime.now()
 
     idList = fe.split(",")
 
-    chemin = p
+    chemin = d
 
     if not exists(chemin):
         filterList = [fes.PropertyIsEqualTo(att_name, i) for i in idList]
@@ -86,10 +100,10 @@ def GetWFSLayerFilter(u, n, p, a, fe, s):
         f.write(data)
         f.close()
 
-    # Calculat time
-    delta = datetime.now() - start
+	# Calculat time
+	delta = datetime.now() - start
 
-    print "\n{0} Downloaded on : {1}\n".format(n, delta)
+	print "\n{0} Downloaded on : {1}\n".format(n, delta)
 
     return
 

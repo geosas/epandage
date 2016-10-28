@@ -11,7 +11,8 @@ import logging
 
 class Process(WPSProcess):
     '''
-    TODO : Indicate, on the execute methode, the right path to your configuration file "epandage_process.conf"
+    TODO : Indicate, on the execute methode, the right path to your
+    configuration file "epandage_process.conf"
     contaning the WFS URL's and names to deal with.
     '''
 
@@ -26,7 +27,8 @@ class Process(WPSProcess):
             storeSupported=True,
             statusSupported=True,
             grassLocation=True,
-            abstract="Service WPS pour le calcul des superfice des parcelles pottentiellement epandables (SPE)")
+            abstract='''Service WPS pour le calcul des superfice des parcelles
+            pottentiellement epandables (SPE)''')
 
         #######################################################################
         # Inputs
@@ -181,7 +183,7 @@ class Process(WPSProcess):
 
         # Delete all file in /tmp/epandage directory older than n_days
         now = time.time()
-        n_days = 0
+        n_days = 3
         cutoff = now - (n_days * 86400)
         files = os.listdir(tmp_dir)
         for xfile in files:
@@ -239,7 +241,7 @@ class Process(WPSProcess):
                 # Get WFS parcelles layer by attributes (default srs =
                 # EPSG:2154)
                 self.cmd(
-                    scripts_path + "GetWFSLayer_filter.py -u %s -n %s -p %s -a %s -f %s" %
+                    scripts_path + "GetWFSLayer_filter_REST.py -u %s -n %s -d %s -a %s -f %s" %
                     (url_par, name_par, path_to_file, att_name, parcellesId))
                 break
             except:
@@ -301,7 +303,7 @@ class Process(WPSProcess):
                         # Download layer using WFS Bonding box filter and add
                         # offset of 500m (flag '+o')
                         self.cmd(
-                            scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +p %s +b %s +o" %
+                            scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" %
                             (url, name, pathName, bbox))
                         break
                     except:
@@ -604,7 +606,6 @@ class Process(WPSProcess):
                     "Il n'y a pas de zone potentiellement epandable pour vos parcelles")
         # if the area to process is bigger to max_area (ha)
         else:
-
             # Change the variable "outputData" from ComplexOutput to
             # LiteralOutput
             self.outputData = self.addLiteralOutput(identifier="outputData",
