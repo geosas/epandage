@@ -8,6 +8,11 @@ import hashlib
 import yaml
 import logging
 
+import multiprocessing
+from multiprocessing.pool import ThreadPool
+import subprocess
+import shlex
+
 
 class Process(WPSProcess):
     '''
@@ -170,10 +175,12 @@ class Process(WPSProcess):
         LOGGER = logging.getLogger(__name__)
 
         stime = datetime.now()
-
+        
+        # Creat a date suffix
         CurrentDateTime = time.strftime("%Y%m%d-%H%M%S")
         stime = datetime.now()
-
+        
+        # Get cumputer's tmp directory and creat "tmp_epandage" folder in
         tmp = tempfile.gettempdir()
         tmp_dir = tmp + '/tmp_epandage/'
 
@@ -220,8 +227,11 @@ class Process(WPSProcess):
             distance = val[2]
             if distance[:8] == 'distance':
                 layerList[key][2] = self.getInputValue(distance)
+        
+        #########################################
+        # Get Parcelles layer
+        #########################################
 
-        layerList['1'][2]
         # RPG Nominatif layer WFS URL
         RPG_layer = config_in['RPG_layer']
         url_par = RPG_layer['url']
@@ -240,12 +250,11 @@ class Process(WPSProcess):
             try:
                 # Get WFS parcelles layer by attributes (default srs =
                 # EPSG:2154)
-                self.cmd(
-                    scripts_path + "GetWFSLayer_filter_REST.py -u %s -n %s -d %s -a %s -f %s" %
-                    (url_par, name_par, path_to_file, att_name, parcellesId))
+                commande = scripts_path + "GetWFSLayer_filter_REST.py -u %s -n %s -d %s -a %s -f %s" % (url_par, name_par, path_to_file, att_name, parcellesId)
+                subprocess.Popen(shlex.split(commande), stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
                 break
             except:
-                print 'Timeout !'
+                LOGGER.error('GetWFSLayer_filter_REST {0} Timeout Error !'.format(name_par))
 
         # Import data into GRASS using v.in.ogr
         self.cmd(
@@ -259,7 +268,12 @@ class Process(WPSProcess):
             columns='Parcelle_ha double precision')
         self.cmd(
             "v.to.db --quiet map=parcelle columns=Parcelle_ha option=area unit=hectares")
-
+        
+        #########################################
+        # Check the bbox size of Parcelle layer
+        #########################################
+        
+        # Get the bbox of parcelle layer
         area_ha = self.cmd(
             scripts_path +
             "GetGeojsonBboxArea.py -d %s" %
@@ -267,8 +281,7 @@ class Process(WPSProcess):
 
         # area max hectars
         max_area = 20000
-
-        if int(area_ha) < max_area:
+        if int(area_ha) <= max_area:
             # Get geojson file extent
             bbox = self.cmd(
                 scripts_path +
@@ -283,49 +296,102 @@ class Process(WPSProcess):
             box = (str(bb[0] - off), str(bb[1] - off),
                    str(bb[2] + off), str(bb[3] + off))
             box_str = ''.join(box)
-
+        
+            ####################################################################
+            # Get the other layers depending to the bbox size of Parcelle layer
+            ####################################################################   
+            def call_async_process(cmd):
+                """ This methode allows to run a separate thread. """
+                #subprocess.call(shlex.split(cmd))  # This will block until cmd finishes
+                p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                out, err = p.communicate()
+                return (out, err)
+                
+            def call_async_process_grass(cmd):
+                """ This methode allows to run a separate grass thread. """
+                #subprocess.call(shlex.split(cmd))  # This will block until cmd finishes
+                p = grass.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                out, err = p.communicate()
+                return (out, err)
+                 
+            results = []
+            # Count computer's CPU
+            n_cpu = multiprocessing.cpu_count()
+            pool = ThreadPool(n_cpu)
+            
+            # Init counter
             k = 0
-            ogrInList = []
-            dist_list = []
             for key, val in sorted(layerList.iteritems()):
                 url = val[0]
                 name = val[1]
-                dist = val[2]
 
                 # generate a unique name using the layernName & the bbox
                 bb_arr_id = str(int(hashlib.md5(box_str).hexdigest(), 16))
                 pathName = tmp_dir + name + '_' + bb_arr_id + ".geojson"
-                data = 'data' + str(k)
 
                 # try the WFS request 3 times
                 for s in range(3):
                     try:
                         # Download layer using WFS Bonding box filter and add
                         # offset of 500m (flag '+o')
-                        self.cmd(
-                            scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" %
-                            (url, name, pathName, bbox))
+                        cmd = scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, name, pathName, bbox)
+                        
+                        # Run the command asynchronously on full CPU capacity
+                        results.append(pool.apply_async(call_async_process, (cmd,)))
                         break
                     except:
-                        LOGGER.info('GetWFSLayer_bbox {0} Request Error !'.format(name))
-
-                # Test si le ficher vecteur n'est pas vide
+                        LOGGER.error('GetWFSLayer_bbox {0} Request Error !'.format(name))
+                
+                # Add the downloaded files paths to the layerList
+                layerList[key].append(pathName)
+                k += 1
+                        
+            # Close the pool and wait for each running task to complete
+            pool.close()
+            pool.join()
+            
+            #########################################
+            # OGR Inputs
+            #########################################             
+            # init vars
+            pool = ThreadPool(n_cpu)
+            results = []            
+            ogrInList = []
+            dist_list = []
+            pathName_list = []
+            d = 0
+            # Test if the vector downloaded is not empty, add it to the process list
+            for key, val in sorted(layerList.iteritems()):
+                dist = val[2]
+                pathName = val[3]
                 with open(pathName) as data_file:
                     in_data = json.load(data_file)
                     nfeatures = in_data['totalFeatures']
                     if not nfeatures == 0:
+                        data = 'data' + str(d)
+                        
                         # Import data into GRASS using v.in.ogr (-t : don't
                         # import table)
-                        self.cmd(
-                            "v.in.ogr --quiet -o input=%s output=%s" %
-                            (pathName, data))
+                        cmd_in_ogr = "v.in.ogr --quiet -o input=%s output=%s" % (pathName, data)
+                        
+                        # Run the command asynchronously on full CPU capacity
+                        results.append(pool.apply_async(call_async_process_grass, (cmd_in_ogr,)))
+                        
+                        # Populate inputs and distances lists
                         ogrInList.append(data)
                         dist_list.append(dist)
-                        k += 1
+                        pathName_list.append(pathName)
+                        d += 1
+                        
+            # Close the pool and wait for each running task to complete
+            pool.close()
+            pool.join()
 
             #########################################
             # Buffer
             #########################################
+            pool = ThreadPool(n_cpu)
+            results = []
             bufferList = []
             j = 0
             slope_input = None
@@ -336,17 +402,19 @@ class Process(WPSProcess):
                     slope_input = inputs
                 else:
                     # v.buffer - Creates a buffer around vector features of given type.
-                    grass.run_command(
-                        'v.buffer',
-                        quiet=True,
-                        input=inputs,
-                        output=out_buffer,
-                        distance=distance,
-                        tolerance=self.getInputValue('toleranceBuffer'))
-
+                    cmd_buffer = "v.buffer --quiet input=%s output=%s distance=%s tolerance=%s" % (inputs, out_buffer, distance, self.getInputValue('toleranceBuffer'))
+                
+                    # Run the command asynchronously on full CPU capacity
+                    results.append(pool.apply_async(call_async_process_grass, (cmd_buffer,)))
+                    
+                    # Add buffer outputs to the list
                     bufferList.append(out_buffer)
                     j += 1
-
+            
+            # Close the pool and wait for each running task to complete
+            pool.close()
+            pool.join()  
+            
             #########################################
             # Difference
             #########################################
@@ -582,11 +650,8 @@ class Process(WPSProcess):
                 # affecting output time
                 delta = datetime.now() - stime
                 temps_sec = 'Temps de traitement: {0} \n'.format(delta)
-                LOGGER.info(temps_sec)
 
                 self.processTime.setValue(temps_sec)
-
-
 
             # if buffer overlay completely the parcelles layer (if final_out is None)
             else:
@@ -598,7 +663,6 @@ class Process(WPSProcess):
                 # affecting output time
                 delta = datetime.now() - stime
                 temps_sec = 'Temps de traitement: {0} \n'.format(delta)
-                LOGGER.info(temps_sec)
 
                 self.processTime.setValue(temps_sec)
 
@@ -617,3 +681,4 @@ class Process(WPSProcess):
                 " ha, veillez choisir des parcelles plus proches les unes des autres")
 
         return
+        

@@ -65,6 +65,9 @@ export PYTHONPATH=/usr/local/grass-7.*/etc/python/
 - owslib
 - geojson
 - logging
+- multiprocessing
+- subprocess
+- shlex
 ```
 
 ### WPS "epandage" usage
