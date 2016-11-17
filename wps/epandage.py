@@ -300,15 +300,8 @@ class Process(WPSProcess):
             ####################################################################
             # Get the other layers depending to the bbox size of Parcelle layer
             ####################################################################   
-            def call_async_process(cmd):
-                """ This methode allows to run a separate thread. """
-                #subprocess.call(shlex.split(cmd))  # This will block until cmd finishes
-                p = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                out, err = p.communicate()
-                return (out, err)
-                
             def call_async_process_grass(cmd):
-                """ This methode allows to run a separate grass thread. """
+                """ This methode allows to run a separate thread. """
                 #subprocess.call(shlex.split(cmd))  # This will block until cmd finishes
                 p = grass.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 out, err = p.communicate()
@@ -337,10 +330,13 @@ class Process(WPSProcess):
                         cmd = scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, name, pathName, bbox)
                         
                         # Run the command asynchronously on full CPU capacity
-                        results.append(pool.apply_async(call_async_process, (cmd,)))
+                        results.append(pool.apply_async(call_async_process_grass, (cmd,)))
                         break
                     except:
-                        LOGGER.error('GetWFSLayer_bbox {0} Request Error !'.format(name))
+                        # Display the command stdout error
+                        for result in results:
+                            out, err = result.get()
+                            LOGGER.error('GetWFSLayer_bbox {0} Request Error !'.format(err))
                 
                 # Add the downloaded files paths to the layerList
                 layerList[key].append(pathName)
