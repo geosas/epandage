@@ -40,7 +40,7 @@ class Process(WPSProcess):
         #######################################################################
         self.parcelList = self.addLiteralInput(identifier="parcelList",
                                                title="Identifiant(s) de(s) parcelle(s) - attributs 'ilot_cdn' (separateur: virgule)",
-                                               default="361664,361665,361666,361667,361669",
+                                               default="361667",
                                                type="",
                                                minOccurs=1)
 
@@ -250,7 +250,7 @@ class Process(WPSProcess):
             try:
                 # Get WFS parcelles layer by attributes (default srs =
                 # EPSG:2154)
-                commande = scripts_path + "GetWFSLayer_filter_REST.py -u %s -n %s -d %s -a %s -f %s" % (url_par, name_par, path_to_file, att_name, parcellesId)
+                commande = scripts_path + "GetWFSLayer_filter.py -u %s -n %s -d %s -a %s -f %s" % (url_par, name_par, path_to_file, att_name, parcellesId)
                 subprocess.Popen(shlex.split(commande), stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
                 break
             except:
