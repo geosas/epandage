@@ -351,7 +351,7 @@ class Process(WPSProcess):
                         for result in results:
                             out, err = result.get()
                             LOGGER.error(
-                                'GetWFSLayer_bbox {0} Request Error !'.format(err))
+                                'GetWFSLayer_bbox request Error:  {0}\n'.format(err))
 
                 # Add the downloaded files paths to the layerList
                 layerList[key].append(pathName)
