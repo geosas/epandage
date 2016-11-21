@@ -117,9 +117,9 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
 
         # Calculat time
         delta = datetime.now() - start
-
         print "\n{0} Downloaded on : {1}\n".format(n, delta)
-
+    else:
+        print "\n{0} exsists\n".format(n)
     return
 
 # --------------------------------------------------------------

@@ -38,11 +38,12 @@ class Process(WPSProcess):
         #######################################################################
         # Inputs
         #######################################################################
-        self.parcelList = self.addLiteralInput(identifier="parcelList",
-                                               title="Identifiant(s) de(s) parcelle(s) - attributs 'ilot_cdn' (separateur: virgule)",
-                                               default="361667",
-                                               type="",
-                                               minOccurs=1)
+        self.parcelList = self.addLiteralInput(
+            identifier="parcelList",
+            title="Identifiant(s) de(s) parcelle(s) - attributs 'ilot_cdn' (separateur: virgule)",
+            default="361667",
+            type="",
+            minOccurs=1)
 
         self.userData = self.addComplexInput(
             identifier="userData",
@@ -175,11 +176,11 @@ class Process(WPSProcess):
         LOGGER = logging.getLogger(__name__)
 
         stime = datetime.now()
-        
+
         # Creat a date suffix
         CurrentDateTime = time.strftime("%Y%m%d-%H%M%S")
         stime = datetime.now()
-        
+
         # Get cumputer's tmp directory and creat "tmp_epandage" folder in
         tmp = tempfile.gettempdir()
         tmp_dir = tmp + '/tmp_epandage/'
@@ -227,7 +228,7 @@ class Process(WPSProcess):
             distance = val[2]
             if distance[:8] == 'distance':
                 layerList[key][2] = self.getInputValue(distance)
-        
+
         #########################################
         # Get Parcelles layer
         #########################################
@@ -242,19 +243,26 @@ class Process(WPSProcess):
 
         idList = parcellesId.split(",")
         ids = ''.join(map(str, idList))
-        idList_hash = str(int(hashlib.md5(ids).hexdigest(), 16))
-        path_to_file = tmp_dir + name_par + '_' + idList_hash + '.geojson'
+        idList_hash = hashlib.md5(ids).hexdigest()
+        path_to_file = tmp_dir + name_par + '_' + idList_hash
 
+        results = []
         # try the WFS filtered request 3 times
         for t in range(3):
             try:
                 # Get WFS parcelles layer by attributes (default srs =
                 # EPSG:2154)
-                commande = scripts_path + "GetWFSLayer_filter.py -u %s -n %s -d %s -a %s -f %s" % (url_par, name_par, path_to_file, att_name, parcellesId)
-                subprocess.Popen(shlex.split(commande), stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
+                commande = scripts_path + "GetWFSLayer_filter.py -u %s -n %s -d %s -a %s -f %s" % (
+                    url_par, name_par, path_to_file, att_name, parcellesId)
+                p = subprocess.Popen(
+                    shlex.split(commande),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                out, err = p.communicate()
                 break
             except:
-                LOGGER.error('GetWFSLayer_filter_REST {0} Timeout Error !'.format(name_par))
+                LOGGER.error(
+                    'GetWFSLayer_filter request Error: {0} \n'.format(err))
 
         # Import data into GRASS using v.in.ogr
         self.cmd(
@@ -268,11 +276,11 @@ class Process(WPSProcess):
             columns='Parcelle_ha double precision')
         self.cmd(
             "v.to.db --quiet map=parcelle columns=Parcelle_ha option=area unit=hectares")
-        
+
         #########################################
         # Check the bbox size of Parcelle layer
         #########################################
-        
+
         # Get the bbox of parcelle layer
         area_ha = self.cmd(
             scripts_path +
@@ -296,67 +304,75 @@ class Process(WPSProcess):
             box = (str(bb[0] - off), str(bb[1] - off),
                    str(bb[2] + off), str(bb[3] + off))
             box_str = ''.join(box)
-        
-            ####################################################################
+
+            ###################################################################
             # Get the other layers depending to the bbox size of Parcelle layer
-            ####################################################################   
+            ###################################################################
             def call_async_process_grass(cmd):
                 """ This methode allows to run a separate thread. """
-                #subprocess.call(shlex.split(cmd))  # This will block until cmd finishes
-                p = grass.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                # subprocess.call(shlex.split(cmd))  # This will block until
+                # cmd finishes
+                p = grass.Popen(
+                    shlex.split(cmd),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
                 out, err = p.communicate()
                 return (out, err)
-                 
-            results = []
+
             # Count computer's CPU
             n_cpu = multiprocessing.cpu_count()
             pool = ThreadPool(n_cpu)
-            
+
             # Init counter
             k = 0
             for key, val in sorted(layerList.iteritems()):
                 url = val[0]
                 name = val[1]
-
+                results = []
                 # generate a unique name using the layernName & the bbox
-                bb_arr_id = str(int(hashlib.md5(box_str).hexdigest(), 16))
-                pathName = tmp_dir + name + '_' + bb_arr_id + ".geojson"
+                bb_arr_id = hashlib.md5(box_str).hexdigest()
+                pathName = tmp_dir + name + '_' + bb_arr_id
 
                 # try the WFS request 3 times
                 for s in range(3):
                     try:
                         # Download layer using WFS Bonding box filter and add
                         # offset of 500m (flag '+o')
-                        cmd = scripts_path + "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, name, pathName, bbox)
-                        
+                        cmd = scripts_path + \
+                            "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, name, pathName, bbox)
+
                         # Run the command asynchronously on full CPU capacity
-                        results.append(pool.apply_async(call_async_process_grass, (cmd,)))
+                        results.append(
+                            pool.apply_async(
+                                call_async_process_grass, (cmd,)))
                         break
                     except:
                         # Display the command stdout error
                         for result in results:
                             out, err = result.get()
-                            LOGGER.error('GetWFSLayer_bbox {0} Request Error !'.format(err))
-                
+                            LOGGER.error(
+                                'GetWFSLayer_bbox {0} Request Error !'.format(err))
+
                 # Add the downloaded files paths to the layerList
                 layerList[key].append(pathName)
                 k += 1
-                        
+
             # Close the pool and wait for each running task to complete
             pool.close()
             pool.join()
-            
+
             #########################################
             # OGR Inputs
-            #########################################             
+            #########################################
             # init vars
             pool = ThreadPool(n_cpu)
-            results = []            
+            results = []
             ogrInList = []
             dist_list = []
             pathName_list = []
             d = 0
-            # Test if the vector downloaded is not empty, add it to the process list
+            # Test if the vector downloaded is not empty, add it to the process
+            # list
             for key, val in sorted(layerList.iteritems()):
                 dist = val[2]
                 pathName = val[3]
@@ -365,20 +381,23 @@ class Process(WPSProcess):
                     nfeatures = in_data['totalFeatures']
                     if not nfeatures == 0:
                         data = 'data' + str(d)
-                        
+
                         # Import data into GRASS using v.in.ogr (-t : don't
                         # import table)
-                        cmd_in_ogr = "v.in.ogr --quiet -o input=%s output=%s" % (pathName, data)
-                        
+                        cmd_in_ogr = "v.in.ogr --quiet -o input=%s output=%s" % (
+                            pathName, data)
+
                         # Run the command asynchronously on full CPU capacity
-                        results.append(pool.apply_async(call_async_process_grass, (cmd_in_ogr,)))
-                        
+                        results.append(
+                            pool.apply_async(
+                                call_async_process_grass, (cmd_in_ogr,)))
+
                         # Populate inputs and distances lists
                         ogrInList.append(data)
                         dist_list.append(dist)
                         pathName_list.append(pathName)
                         d += 1
-                        
+
             # Close the pool and wait for each running task to complete
             pool.close()
             pool.join()
@@ -397,20 +416,24 @@ class Process(WPSProcess):
                 if distance == 'slope':
                     slope_input = inputs
                 else:
-                    # v.buffer - Creates a buffer around vector features of given type.
-                    cmd_buffer = "v.buffer --quiet input=%s output=%s distance=%s tolerance=%s" % (inputs, out_buffer, distance, self.getInputValue('toleranceBuffer'))
-                
+                    # v.buffer - Creates a buffer around vector features of
+                    # given type.
+                    cmd_buffer = "v.buffer --quiet input=%s output=%s distance=%s tolerance=%s" % (
+                        inputs, out_buffer, distance, self.getInputValue('toleranceBuffer'))
+
                     # Run the command asynchronously on full CPU capacity
-                    results.append(pool.apply_async(call_async_process_grass, (cmd_buffer,)))
-                    
+                    results.append(
+                        pool.apply_async(
+                            call_async_process_grass, (cmd_buffer,)))
+
                     # Add buffer outputs to the list
                     bufferList.append(out_buffer)
                     j += 1
-            
+
             # Close the pool and wait for each running task to complete
             pool.close()
-            pool.join()  
-            
+            pool.join()
+
             #########################################
             # Difference
             #########################################
@@ -649,7 +672,8 @@ class Process(WPSProcess):
 
                 self.processTime.setValue(temps_sec)
 
-            # if buffer overlay completely the parcelles layer (if final_out is None)
+            # if buffer overlay completely the parcelles layer (if final_out is
+            # None)
             else:
                 # Change the variable "outputData" from ComplexOutput to
                 # LiteralOutput
@@ -677,4 +701,3 @@ class Process(WPSProcess):
                 " ha, veillez choisir des parcelles plus proches les unes des autres")
 
         return
-        

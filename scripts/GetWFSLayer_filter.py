@@ -100,11 +100,11 @@ def GetWFSLayerFilter(u, n, d, a, fe, s):
         f.write(data)
         f.close()
 
-	# Calculat time
-	delta = datetime.now() - start
-
-	print "\n{0} Downloaded on : {1}\n".format(n, delta)
-
+        # Calculat time
+        delta = datetime.now() - start
+        print "\n{0} Downloaded on : {1}\n".format(n, delta)
+    else:
+        print "\n{0} exsists\n".format(n)
     return
 
 # --------------------------------------------------------------
