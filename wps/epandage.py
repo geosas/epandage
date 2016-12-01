@@ -273,9 +273,9 @@ class Process(WPSProcess):
             'v.db.addcolumn',
             quiet=True,
             map='parcelle',
-            columns='Parcelle_ha double precision')
+            columns='surf_ilot_ha double precision')
         self.cmd(
-            "v.to.db --quiet map=parcelle columns=Parcelle_ha option=area unit=hectares")
+            "v.to.db --quiet map=parcelle columns=surf_ilot_ha option=area unit=hectares")
 
         #########################################
         # Check the bbox size of Parcelle layer
@@ -564,7 +564,7 @@ class Process(WPSProcess):
                             # features from ainput not overlayed by features
                             # from binput
                             self.cmd(
-                                "v.overlay --quiet ainput=OutFinale binput=userLayerPlus operator=or output=OutFinale2 olayer=1,1,0")
+                                "v.overlay --quiet ainput=OutFinale binput=userLayerPlus operator=or output=OutFinale2 olayer=1,0,0")
                             # v.db.dropcolumn - Drops a column from the
                             # attribute table connected to a given vector map.
                             grass.run_command(
@@ -591,7 +591,7 @@ class Process(WPSProcess):
                         # v.overlay - Overlays two vector maps - not: features
                         # from ainput not overlayed by features from binput
                         self.cmd(
-                            "v.overlay --quiet ainput=%s binput=userLayerPlus operator=or output=OutFinale3 olayer=1,1,0" %
+                            "v.overlay --quiet ainput=%s binput=userLayerPlus operator=or output=OutFinale3 olayer=1,0,0" %
                             (final_out))
                         # v.db.dropcolumn - Drops a column from the attribute
                         # table connected to a given vector map.
@@ -605,17 +605,21 @@ class Process(WPSProcess):
                         os.remove(outPlus_2154)
                         final_out = 'OutFinale3'
 
+                # v.clean - Toolset for cleaning topology of vector map - remove small area (< 200 m2)
+                self.cmd("v.clean --quiet input=%s output=cleanmap tool=rmarea threshold=200" % (final_out))                
+                final_out = "cleanmap"
+                
                 # v.db.addcolumn - Adds one or more columns to the attribute
                 # table connected to a given vector map.
                 grass.run_command(
                     'v.db.addcolumn',
                     quiet=True,
                     map=final_out,
-                    columns='SPE_ha double precision')
+                    columns='surf_SPE_ha double precision')
 
                 # v.to.db - Populates attribute values from vector features.
                 self.cmd(
-                    "v.to.db --quiet map=%s columns=SPE_ha option=area unit=hectares" %
+                    "v.to.db --quiet map=%s columns=surf_SPE_ha option=area unit=hectares" %
                     (final_out))
 
                 #########################################
