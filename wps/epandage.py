@@ -487,11 +487,14 @@ class Process(WPSProcess):
 
                     # v.overlay - Overlays two vector maps - not: features from
                     # ainput not overlayed by features from binput
-                    self.cmd(
-                        "v.overlay --quiet ainput=%s binput=extracted_3 operator=not output=out_overlay_3 olayer=0,1,0" %
-                        (final_out))
-
-                    final_out = 'out_overlay_3'
+                    try:
+                        self.cmd(
+                            "v.overlay --quiet ainput=%s binput=extracted_3 operator=not output=out_overlay_3 olayer=0,1,0" %
+                            (final_out))
+    
+                        final_out = 'out_overlay_3'
+                    except:
+                        pass
 
                     if self.getInputValue('distanceEau_10') == '100':
 
@@ -507,11 +510,14 @@ class Process(WPSProcess):
 
                         # v.overlay - Overlays two vector maps - not: features
                         # from ainput not overlayed by features from binput
-                        self.cmd(
-                            "v.overlay --quiet ainput=%s binput=extracted_2 operator=not output=out_overlay_3_2 olayer=0,1,0" %
-                            (final_out))
-
-                        final_out = 'out_overlay_3_2'
+                        try:
+                            self.cmd(
+                                "v.overlay --quiet ainput=%s binput=extracted_2 operator=not output=out_overlay_3_2 olayer=0,1,0" %
+                                (final_out))
+    
+                            final_out = 'out_overlay_3_2'
+                        except:
+                            pass
 
                 # Overlay with usertacerData
                 userData = self.getInputValue('userData')
