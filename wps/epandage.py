@@ -55,25 +55,20 @@ class Process(WPSProcess):
 
         self.distanceEau_7 = self.addLiteralInput(
             identifier="distanceEau_7",
-            title="Distance minimale (m) du cours d'eau",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 7%",
             default="35",
-            allowedValues=['35'],
             type="")
 
         self.distanceEau_10 = self.addLiteralInput(
             identifier="distanceEau_10",
-            title="Distance minimale (m) du cours d'eau",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 10%",
             default="35",
-            allowedValues=[
-                '35',
-                '100'],
             type="")
 
         self.distanceEau_15 = self.addLiteralInput(
             identifier="distanceEau_15",
-            title="Distance minimale (m) du cours d'eau",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 15%",
             default="100",
-            allowedValues=['100'],
             type="")
 
         self.distancePisci = self.addLiteralInput(

@@ -105,6 +105,7 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
             'srsName':s,
             'outputFormat':'application/json'
             }
+            
         # if building layer -> replace bbox filter to cql_filter to make double
         # filter (bbox & feature)
         if n == "CP.CadastralBuilding":
