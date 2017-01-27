@@ -175,12 +175,15 @@ class Process(WPSProcess):
 
         LOGGER = logging.getLogger(__name__)
 
+        Process_start_time = time.strftime("%Y-%m-%d_%H:%M:%S")
+        LOGGER.info("\nStart a new Execute at : {0}\n".format(Process_start_time))
+        
         stime = datetime.now()
 
         # Creat a date suffix
         CurrentDateTime = time.strftime("%Y%m%d-%H%M%S")
         stime = datetime.now()
-
+        
         # Get cumputer's tmp directory and creat "tmp_epandage" folder in
         tmp = tempfile.gettempdir()
         tmp_dir = tmp + '/tmp_epandage/'
@@ -191,7 +194,7 @@ class Process(WPSProcess):
 
         # Delete all file in /tmp/epandage directory older than n_days
         now = time.time()
-        n_days = 3
+        n_days = 0
         cutoff = now - (n_days * 86400)
         files = os.listdir(tmp_dir)
         for xfile in files:

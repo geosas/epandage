@@ -104,7 +104,13 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
             'bbox':bbox,
             'srsName':s,
             'outputFormat':'application/json'
-        }
+            }
+        # if building layer -> replace bbox filter to cql_filter to make double
+        # filter (bbox & feature)
+        if n == "CP.CadastralBuilding":
+            cql_filter = "(bbox(geometry,%s,'%s')and(type='01'))" % (bbox, s)
+            param.pop('bbox')
+            param['CQL_FILTER'] = cql_filter
 
         # Do the GET request
         r = requests.get(url=u, params=param, timeout=10)
@@ -120,7 +126,7 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
         print "\n{0} Downloaded on : {1}\n".format(n, delta)
     else:
         print "\n{0} exsists\n".format(n)
-    return
+    return cql_filter
 
 # --------------------------------------------------------------
 # II - Execute function
