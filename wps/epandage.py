@@ -194,7 +194,10 @@ class Process(WPSProcess):
 
         # Delete all file in /tmp/epandage directory older than n_days
         now = time.time()
+        
+        # number of days for to keeping cash
         n_days = 0
+        
         cutoff = now - (n_days * 86400)
         files = os.listdir(tmp_dir)
         for xfile in files:
