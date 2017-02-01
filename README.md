@@ -82,35 +82,46 @@ Here is an example of the configuration file __"epandage_process.conf"__ :
 
 ```json=1
 {
-   "RPG_layer":{
-      "url":"http://geobretagne.fr.../wfs",
-      "name":"RPG",
-      "att_name":"ilos_id"
-   },
-   "layerList":{
-      "1":[
-         "http://geobretagne.fr..../wfs",
-         "bdtopo_cours_eau",
-         "distanceEau_7"
-      ],
-      "2":[
-         "http://geobretagne.fr..../wfs",
-         "Cadastral_Building",
-         "distanceBati"
-      ],
-      "3":[
-         "http://geobretagne.fr..../wfs",
-         "cadastre_conchylicole",
-         "distanceZC"
-      ],
-      "4":[....],
-	  
-      "8":[
-         "http://geowww.agrocampus-ouest.fr..../wfs",
-         "Vector_SLOPE_layer",
-         "slope"
-      ]
-   }
+	"RPG_layer": {
+		"url": "http://geobretagne.fr.../wfs",
+		"name": "RPG",
+		"att_name": "ilos_id",
+		"login": "",
+		"password": ""
+	},
+	"layerList": {
+		"1": {
+			"url": "http://geobretagne.fr.../wfs",
+			"name": "bdtopo",
+			"distance_att": "distanceEau_7",
+			"login": "",
+			"password": ""
+		},
+		"2": {
+			"url": "http://geobretagne.fr.../wfs",
+			"name": "Cadastre",
+			"distance_att": "distanceBati",
+			"login": "",
+			"password": ""
+		},
+		"3": {
+			"url": "http://geobretagne.fr.../wfs",
+			"name": "conchylicole",
+			"distance_att": "distanceZC",
+			"login": "",
+			"password": ""
+		},
+		"4": {
+			"...": "..."
+		},
+		"8": {
+			"url": "http://geowww.agrocampus-ouest.fr.../wfs",
+			"name": "Vector_SLOPE_layer",
+			"distance_att": "slope",
+			"login": "",
+			"password": ""
+		}
+	}
 }
 ```
 __NB:__ For the slope layer (number __8__ in __layerList__) to be used in the process, it should containe the value **"slope"** as 3th value.
