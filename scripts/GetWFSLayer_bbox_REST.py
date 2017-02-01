@@ -13,9 +13,10 @@ from os.path import exists
 from datetime import datetime
 import argparse
 import requests
+from requests.auth import HTTPBasicAuth
 
 parser = argparse.ArgumentParser(
-    description="GetWFSLayerBbox_REST +o +u <WFS_URL> +n <TypeName> +d <Output directory> +b <BBox> +srs <EPSG:code (Default: EPSG:2154)>",
+    description="GetWFSLayerBbox_REST +o +u <WFS_URL> +n <TypeName> +d <Output directory> +b <BBox> +srs <EPSG:code (Default: EPSG:2154)>  +l <login (optionel)> +pwd <password (optionel)>",
     prog='./GetWFSLayerBbox_REST.py',
     prefix_chars='+')
 
@@ -55,6 +56,20 @@ parser.add_argument(
     required=False,
     default='EPSG:2154',
     help="EPSG code of the request layer - Default: EPSG:2154")
+requiredNamed.add_argument(
+    '+l',
+    metavar='LOGIN',
+    type=str,
+    required=False,
+    default=None,
+    help='WFS LOGIN')
+requiredNamed.add_argument(
+    '+pwd',
+    metavar='PASSWORD',
+    type=str,
+    required=False,
+    default=None,
+    help='WFS PASSWORD')
 
 args = vars(parser.parse_args())
 
@@ -63,6 +78,8 @@ name = args['n']
 BBox = args['b']
 path = args['d']
 srs = args['srs']
+login = args['l']
+password = args['pwd']
 
 # if +o argument is added
 if args['o']:
@@ -74,7 +91,7 @@ else:
 # GetWFSLayer function
 # --------------------------------------------------------------
 
-def GetWFSLayerBbox_REST(u, n, d, b, off, s):
+def GetWFSLayerBbox_REST(u, n, d, b, off, s, l, pwd):
     start = datetime.now()
     # string bbox to list of strings bbox
     bb = b.split(",")
@@ -95,6 +112,7 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
     chemin = d
 
     if not exists(chemin):
+        
         # configurate the request parameters
         param = {
             'Service':'WFS',
@@ -112,9 +130,15 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
             cql_filter = "(bbox(geometry,%s,'%s')and(type='01'))" % (bbox, s)
             param.pop('bbox')
             param['CQL_FILTER'] = cql_filter
-
-        # Do the GET request
-        r = requests.get(url=u, params=param, timeout=10)
+                
+        if l and pwd:
+            # parametres d'autentification
+            auth = HTTPBasicAuth(l, pwd)
+            # Do the GET autenfified request
+            r = requests.get(url=u, auth=auth, params=param, timeout=10)
+        else:
+            # Do the GET request
+            r = requests.get(url=u, params=param, timeout=10)
 
         # Download the zipped shapefile
         data = r.content
@@ -127,11 +151,10 @@ def GetWFSLayerBbox_REST(u, n, d, b, off, s):
         print "\n{0} Downloaded on : {1}\n".format(n, delta)
     else:
         print "\n{0} exsists\n".format(n)
-    return cql_filter
+    return
 
 # --------------------------------------------------------------
 # II - Execute function
 # --------------------------------------------------------------
 if __name__ == '__main__':
-    GetWFSLayerBbox_REST(URL, name, path, BBox, offset, srs)
-
+    GetWFSLayerBbox_REST(URL, name, path, BBox, offset, srs, login, password)

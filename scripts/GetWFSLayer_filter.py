@@ -16,7 +16,7 @@ from owslib.wfs import WebFeatureService
 from owslib import fes
 
 parser = argparse.ArgumentParser(
-    description="GetWFSLayer_filter_REST.py -l <login> -pass <password> -u <WFS_URL> -n <TypeName> -p <Output directory> -a <Field name> -f <'value1,value2,...'> -srs <EPSG:code (Default: EPSG:2154)>",
+    description="GetWFSLayer_filter_REST.py -u <WFS_URL> -l <login> -pwd <password> -n <TypeName> -p <Output directory> -a <Field name> -f <'value1,value2,...'> -srs <EPSG:code (Default: EPSG:2154)>",
     prog='./GetWFSLayer_filter_REST.py')
 
 requiredNamed = parser.add_argument_group('required arguments')
@@ -27,6 +27,18 @@ requiredNamed.add_argument(
     type=str,
     required=True,
     help='WFS URL')
+requiredNamed.add_argument(
+    '-l',
+    metavar='LOGIN',
+    type=str,
+    required=False,
+    help='WFS USERNAME')
+requiredNamed.add_argument(
+    '-pwd',
+    metavar='PASSWORD',
+    type=str,
+    required=False,
+    help='WFS PASSWORD')
 requiredNamed.add_argument(
     '-n',
     metavar='typename',
@@ -62,6 +74,8 @@ parser.add_argument(
 args = vars(parser.parse_args())
 
 URL = args['u']
+username = args['l']
+password = args['pwd']
 name = args['n']
 path = args['d']
 att_name = args['a']
@@ -71,9 +85,7 @@ srs = args['srs']
 # --------------------------------------------------------------
 # GetWFSLayer function
 # --------------------------------------------------------------
-
-
-def GetWFSLayerFilter(u, n, d, a, fe, s):
+def GetWFSLayerFilter(u, l, pwd, n, d, a, fe, s):
     start = datetime.now()
 
     idList = fe.split(",")
@@ -81,12 +93,13 @@ def GetWFSLayerFilter(u, n, d, a, fe, s):
     chemin = d
 
     if not exists(chemin):
-        filterList = [fes.PropertyIsEqualTo(att_name, i) for i in idList]
+        filterList = [fes.PropertyIsEqualTo(a, i) for i in idList]
         fr = fes.FilterRequest()
         filter_fes = fr.setConstraintList(filterList, tostring=True)
-
+        
         # Get the vector layer using OGC WFS standard vrsion 1.0.0
-        wfs = WebFeatureService(u, version='1.0.0', timeout=10)
+        wfs = WebFeatureService(u, version='1.0.0', username=l , password=pwd , timeout=10)
+
         # Supported outputFormat : GML2, GML3, shape-zip, application/json
         getFeature = wfs.getfeature(
             typename=(n,),
@@ -111,4 +124,4 @@ def GetWFSLayerFilter(u, n, d, a, fe, s):
 # II - Execute function
 # --------------------------------------------------------------
 if __name__ == '__main__':
-    GetWFSLayerFilter(URL, name, path, att_name, fe, srs)
+    GetWFSLayerFilter(URL, username, password, name, path, att_name, fe, srs)
