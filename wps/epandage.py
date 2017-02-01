@@ -172,7 +172,8 @@ class Process(WPSProcess):
 
         Process_start_time = time.strftime("%Y-%m-%d_%H:%M:%S")
         LOGGER.info("\nStart a new Execute at : {0}\n".format(Process_start_time))
-        
+#        LOGGER.info('\n%s\n' % (cmd))
+
         stime = datetime.now()
 
         # Creat a date suffix
@@ -215,20 +216,21 @@ class Process(WPSProcess):
         # Load config file
         config_file = '/home/saadni/private_conf/epandage_process.conf'
         read_file = open(config_file).read()
+        
         config_in = json.dumps(json.loads(read_file))  # return a string
 
         # convert str to dict
         config_in = yaml.load(config_in)
 
         # Get layers list {number : [URL, NameSpace, Distance]}
-        layerList = config_in['layerList']
+        layerDict = config_in['layerDict']
 
-        # Change layerList distance identifier to input value :
+        # Change layerDict distance identifier to input value :
         # getInputValue(distance)
-        for key, val in layerList.iteritems():
-            distance = val[2]
+        for key, val in layerDict.iteritems():
+            distance = val['distance_att']
             if distance[:8] == 'distance':
-                layerList[key][2] = self.getInputValue(distance)
+                layerDict[key]['distance_att'] = self.getInputValue(distance)
 
         #########################################
         # Get Parcelles layer
@@ -239,6 +241,8 @@ class Process(WPSProcess):
         url_par = RPG_layer['url']
         name_par = RPG_layer['name']
         att_name = RPG_layer['att_name']
+        login = RPG_layer['login']
+        password =  RPG_layer['password']
 
         parcellesId = self.getInputValue('parcelList')
 
@@ -253,8 +257,8 @@ class Process(WPSProcess):
             try:
                 # Get WFS parcelles layer by attributes (default srs =
                 # EPSG:2154)
-                commande = scripts_path + "GetWFSLayer_filter.py -u %s -n %s -d %s -a %s -f %s" % (
-                    url_par, name_par, path_to_file, att_name, parcellesId)
+                commande = scripts_path + "GetWFSLayer_filter.py -u %s -l %s -pwd %s -n %s -d %s -a %s -f %s" % (
+                    url_par, login, password, name_par, path_to_file, att_name, parcellesId)
                 p = subprocess.Popen(
                     shlex.split(commande),
                     stdout=subprocess.PIPE,
@@ -262,7 +266,7 @@ class Process(WPSProcess):
                 out, err = p.communicate()
                 break
             except:
-                LOGGER.error(
+                LOGGER.info(
                     'GetWFSLayer_filter request Error: {0} \n'.format(err))
 
         # Import data into GRASS using v.in.ogr
@@ -324,11 +328,11 @@ class Process(WPSProcess):
             n_cpu = multiprocessing.cpu_count()
             pool = ThreadPool(n_cpu)
 
-            # Init counter
-            k = 0
-            for key, val in sorted(layerList.iteritems()):
-                url = val[0]
-                name = val[1]
+            for key, val in sorted(layerDict.iteritems()):
+                url = val['url']
+                name = val['name']
+                login = val['login']
+                password = val['password']
                 results = []
                 # generate a unique name using the layernName & the bbox
                 bb_arr_id = hashlib.md5(box_str).hexdigest()
@@ -339,8 +343,20 @@ class Process(WPSProcess):
                     try:
                         # Download layer using WFS Bonding box filter and add
                         # offset of 500m (flag '+o')
-                        cmd = scripts_path + \
-                            "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, name, pathName, bbox)
+                        if login and password:
+                            cmd = scripts_path + \
+                                "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o +l %s +pwd %s" % (url, 
+                                                                                                       name, 
+                                                                                                       pathName, 
+                                                                                                       bbox,
+                                                                                                       login,
+                                                                                                       password)
+                        else:
+                            cmd = scripts_path + \
+                                "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, 
+                                                                                         name, 
+                                                                                         pathName, 
+                                                                                         bbox)
 
                         # Run the command asynchronously on full CPU capacity
                         results.append(
@@ -351,12 +367,11 @@ class Process(WPSProcess):
                         # Display the command stdout error
                         for result in results:
                             out, err = result.get()
-                            LOGGER.error(
+                            LOGGER.info(
                                 'GetWFSLayer_bbox request Error:  {0}\n'.format(err))
 
-                # Add the downloaded files paths to the layerList
-                layerList[key].append(pathName)
-                k += 1
+                # Add the downloaded files paths to the layerDict dict
+                layerDict[key]['pathname'] = pathName
 
             # Close the pool and wait for each running task to complete
             pool.close()
@@ -374,9 +389,9 @@ class Process(WPSProcess):
             d = 0
             # Test if the vector downloaded is not empty, add it to the process
             # list
-            for key, val in sorted(layerList.iteritems()):
-                dist = val[2]
-                pathName = val[3]
+            for key, val in sorted(layerDict.iteritems()):
+                dist = val['distance_att']
+                pathName = val['pathname']
                 with open(pathName) as data_file:
                     in_data = json.load(data_file)
                     nfeatures = in_data['totalFeatures']
