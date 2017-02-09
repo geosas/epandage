@@ -62,12 +62,13 @@ export PYTHONPATH=/usr/local/grass-7.*/etc/python/
 - hashlib
 - yaml
 - argparse
-- owslib
+- owslib (version >= 0.10)
 - geojson
 - logging
 - multiprocessing
 - subprocess
 - shlex
+- requests
 ```
 
 ### WPS "epandage" usage
@@ -76,9 +77,9 @@ Put the __epandage__ folder preferably on the same level of the __processes__  f
 Be sure that the __PYWPS_PROCESSES__ variable on __"pywps.cgi"__  contains the the right directory.
 
 
-Indicate the right path to your configuration file __"epandage_process.conf"__ containing the WFS URLs and layer names to deal with.
+Indicate, in the [__manifest.json__](manifest.json), the right path to your configuration file __"epandage_process.conf"__, the others directories (epandage_tmp_dir...).
 
-Here is an example of the configuration file __"epandage_process.conf"__ :
+Here is an example of the configuration file __"epandage_process.conf"__ (containing the WFS URLs and layer names to deal with) :
 
 ```json=1
 {
@@ -130,6 +131,8 @@ The file path (string) should be assigned to the variable named __"config_file"_
 
 ## For WPS zonage
 This service allows the generation of the slopes zoning vector layer to be used later in the "epandage" WPS service.
+
+Indicate, in the [__manifest.json__](manifest.json), the right directories (zonage_tmp_dir...).
 
 Note: The output layer will automatically be exported on the indicated postgis database.
 
