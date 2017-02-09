@@ -3,7 +3,6 @@ import time
 from datetime import datetime
 import json
 import os
-import tempfile
 import hashlib
 import yaml
 import logging
@@ -15,11 +14,7 @@ import shlex
 
 
 class Process(WPSProcess):
-    '''
-    TODO : Indicate, on the execute methode, the right path to your
-    configuration file "epandage_process.conf"
-    contaning the WFS URL's and names to deal with.
-    '''
+
 
     def __init__(self):
 
@@ -179,10 +174,25 @@ class Process(WPSProcess):
         # Creat a date suffix
         CurrentDateTime = time.strftime("%Y%m%d-%H%M%S")
         stime = datetime.now()
-        
+
+        # Point to the folder where manifest.json is
+        current_path = os.path.realpath(__file__)
+        config_path = os.path.abspath(
+            os.path.join(
+                current_path,
+                '..',
+                '..'))
+
+        manifest_path = '%s/manifest.json' % (config_path)
+
+        # Load manifest file
+        read_manifest = open(manifest_path).read()
+        manifest_conf = json.dumps(json.loads(read_manifest))
+        manifest_conf = yaml.load(manifest_conf)
+
         # Get cumputer's tmp directory and creat "tmp_epandage" folder in
-        tmp = tempfile.gettempdir()
-        tmp_dir = tmp + '/tmp_epandage/'
+        directories = manifest_conf['directories']
+        tmp_dir = directories['epandage_tmp_dir']
 
         # Creat epandage tmp dirrectory if not exist
         if not os.path.exists(tmp_dir):
@@ -190,10 +200,10 @@ class Process(WPSProcess):
 
         # Delete all file in /tmp/epandage directory older than n_days
         now = time.time()
-        
-        # number of days for to keeping cash
-        n_days = 0
-        
+
+        # Get from manifest.json the number of days to keep layers on cash
+        n_days = manifest_conf['epandage_n_dayes_cash']
+
         cutoff = now - (n_days * 86400)
         files = os.listdir(tmp_dir)
         for xfile in files:
@@ -205,20 +215,19 @@ class Process(WPSProcess):
                     os.remove(tmp_dir + xfile)
 
         # Point to the folder 'scripts' (two folders above 'epandage.py')
-        current_path = os.path.realpath(__file__)
-        scripts_path = os.path.abspath(
+        scripts_path = "%s/" % (os.path.abspath(
             os.path.join(
                 current_path,
                 '..',
                 '..',
-                'scripts')) + '/'
+                'scripts')))
+
+        # Get epandage_config_file from manifest.json
+        epandage_config_file = directories['epandage_config_layers']
 
         # Load config file
-        config_file = '/home/saadni/private_conf/epandage_process.conf'
-        read_file = open(config_file).read()
-        
-        config_in = json.dumps(json.loads(read_file))  # return a string
-
+        read_file = open(epandage_config_file).read()
+        config_in = json.dumps(json.loads(read_file))
         # convert str to dict
         config_in = yaml.load(config_in)
 
@@ -257,17 +266,17 @@ class Process(WPSProcess):
             try:
                 # Get WFS parcelles layer by attributes (default srs =
                 # EPSG:2154)
-                commande = scripts_path + "GetWFSLayer_filter.py -u %s -l %s -pwd %s -n %s -d %s -a %s -f %s" % (
-                    url_par, login, password, name_par, path_to_file, att_name, parcellesId)
+                commande = "%sGetWFSLayer_filter.py -u %s -l %s -pwd %s -n %s -d %s -a %s -f %s" % (
+                    scripts_path, url_par, login, password, name_par, path_to_file, att_name, parcellesId)
                 p = subprocess.Popen(
                     shlex.split(commande),
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE)
-                out, err = p.communicate()
+                out = p.communicate()
                 break
             except:
                 LOGGER.info(
-                    'GetWFSLayer_filter request Error: {0} \n'.format(err))
+                    'GetWFSLayer_filter request Error: {0} \n'.format(out))
 
         # Import data into GRASS using v.in.ogr
         self.cmd(
@@ -324,6 +333,32 @@ class Process(WPSProcess):
                 out, err = p.communicate()
                 return (out, err)
 
+            def delete_feilds_suffix(geojson_in, prefix):
+                '''
+                This methode rename all fields with deleting the input prefix.
+                Inputs:
+                    geojson_in : path to the geojson file (String)
+                    prefix : prefix to be delated (String)
+                '''
+                read_file = open(geojson_in).read()
+                vect_dict = json.loads(read_file)
+                n = 0
+                # Iterate all the features
+                for fe in  vect_dict['features']:
+                    properties = fe['properties']
+                    # Delate the prefix on all the feilds names
+                    corrected_dict = {}
+                    for x in properties.keys():
+                        corrected_dict[x.replace(prefix, '')] = properties[x]
+
+                    # Or do it in one line : corrected_dict = {x.replace(prefix, '') : \
+                    #properties[x] for x in properties.keys()}
+                    vect_dict['features'][n]['properties'] = corrected_dict
+                    n += 1
+                with open(geojson_in, 'w') as f:
+                    json.dump(vect_dict, f)
+                return
+
             # Count computer's CPU
             n_cpu = multiprocessing.cpu_count()
             pool = ThreadPool(n_cpu)
@@ -345,17 +380,17 @@ class Process(WPSProcess):
                         # offset of 500m (flag '+o')
                         if login and password:
                             cmd = scripts_path + \
-                                "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o +l %s +pwd %s" % (url, 
-                                                                                                       name, 
-                                                                                                       pathName, 
+                                "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o +l %s +pwd %s" % (url,
+                                                                                                       name,
+                                                                                                       pathName,
                                                                                                        bbox,
                                                                                                        login,
                                                                                                        password)
                         else:
                             cmd = scripts_path + \
-                                "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url, 
-                                                                                         name, 
-                                                                                         pathName, 
+                                "GetWFSLayer_bbox_REST.py +u %s +n %s +d %s +b %s +o" % (url,
+                                                                                         name,
+                                                                                         pathName,
                                                                                          bbox)
 
                         # Run the command asynchronously on full CPU capacity
@@ -507,7 +542,7 @@ class Process(WPSProcess):
                         self.cmd(
                             "v.overlay --quiet ainput=%s binput=extracted_3 operator=not output=out_overlay_3 olayer=0,1,0" %
                             (final_out))
-    
+
                         final_out = 'out_overlay_3'
                     except:
                         pass
@@ -530,7 +565,7 @@ class Process(WPSProcess):
                             self.cmd(
                                 "v.overlay --quiet ainput=%s binput=extracted_2 operator=not output=out_overlay_3_2 olayer=0,1,0" %
                                 (final_out))
-    
+
                             final_out = 'out_overlay_3_2'
                         except:
                             pass
@@ -628,9 +663,9 @@ class Process(WPSProcess):
                         final_out = 'OutFinale3'
 
                 # v.clean - Toolset for cleaning topology of vector map - remove small area (< 200 m2)
-                self.cmd("v.clean --quiet input=%s output=cleanmap tool=rmarea threshold=200" % (final_out))                
+                self.cmd("v.clean --quiet input=%s output=cleanmap tool=rmarea threshold=200" % (final_out))
                 final_out = "cleanmap"
-                
+
                 # v.db.addcolumn - Adds one or more columns to the attribute
                 # table connected to a given vector map.
                 grass.run_command(
@@ -644,16 +679,20 @@ class Process(WPSProcess):
                     "v.to.db --quiet map=%s columns=surf_SPE_ha option=area unit=hectares" %
                     (final_out))
 
+                # v.out.ogr - Exports a vector map layer to any of the
+                # supported OGR vector formats.
+                self.cmd(
+                    "v.out.ogr --quiet --overwrite -s format=GeoJSON input=%s output=out.geojson" %
+                    (final_out))
+
+                # Rename all fields with removing the prefix ('a_')
+                delete_feilds_suffix('out.geojson', 'a_')
+
                 #########################################
                 # Exporting
                 #########################################
                 if self.getInputValue('outputFormat') == "GeoJSON":
-                    # v.out.ogr - Exports a vector map layer to any of the
-                    # supported OGR vector formats.
-                    self.cmd(
-                        "v.out.ogr --quiet --overwrite -s format=GeoJSON input=%s output=out.geojson" %
-                        (final_out))
-                    # Reproject userData from EPSG:2154 to outputSrs
+                    # Reproject userData from EPSG:2154 to outputSrs and export to GeoJSON format
                     self.cmd(["ogr2ogr",
                               "-f",
                               "GeoJSON",
@@ -665,12 +704,7 @@ class Process(WPSProcess):
                               "out.geojson"])
                     fileOut = "ZPE.geojson"
                 elif self.getInputValue('outputFormat') == "GML":
-                    # v.out.ogr - Exports a vector map layer to any of the
-                    # supported OGR vector formats.
-                    self.cmd(
-                        "v.out.ogr --quiet --overwrite -s format=GML input=%s output=out.gml" %
-                        (final_out))
-                    # Reproject userData from EPSG:2154 to outputSrs
+                    # Reproject userData from EPSG:2154 to outputSrs and export to GML format
                     self.cmd(["ogr2ogr",
                               "-f",
                               "GML",
@@ -679,7 +713,7 @@ class Process(WPSProcess):
                               "-t_srs",
                               self.getInputValue('outputSrs'),
                               "ZPE.gml",
-                              "out.gml"])
+                              "out.geojson"])
                     fileOut = "ZPE.gml"
                 else:
                     # db.out.ogr - Exports attribute tables into various
