@@ -16,8 +16,8 @@ from owslib.wfs import WebFeatureService
 from owslib import fes
 
 parser = argparse.ArgumentParser(
-    description="GetWFSLayer_filter_REST.py -u <WFS_URL> -l <login> -pwd <password> -n <TypeName> -p <Output directory> -a <Field name> -f <'value1,value2,...'> -srs <EPSG:code (Default: EPSG:2154)>",
-    prog='./GetWFSLayer_filter_REST.py')
+    description="GetWFSLayer_filter.py -u <WFS_URL> -l <login> -pwd <password> -n <TypeName> -p <Output directory> -a <Field name> -f <'value1,value2,...'> -srs <EPSG:code (Default: EPSG:2154)>",
+    prog='./GetWFSLayer_filter.py')
 
 requiredNamed = parser.add_argument_group('required arguments')
 
@@ -96,7 +96,7 @@ def GetWFSLayerFilter(u, l, pwd, n, d, a, fe, s):
         filterList = [fes.PropertyIsEqualTo(a, i) for i in idList]
         fr = fes.FilterRequest()
         filter_fes = fr.setConstraintList(filterList, tostring=True)
-        
+
         # Get the vector layer using OGC WFS standard vrsion 1.0.0
         wfs = WebFeatureService(u, version='1.0.0', username=l , password=pwd , timeout=10)
 
