@@ -5,6 +5,8 @@ import shutil
 import time
 import logging
 import requests
+import json
+import yaml
 
 
 class Process(WPSProcess):
@@ -156,24 +158,41 @@ class Process(WPSProcess):
 
         LOGGER.info('Start Time : {0} \n'.format(stime))
 
+        # Point to the folder where manifest.json is
+        current_path = os.path.realpath(__file__)
+        config_path = os.path.abspath(
+            os.path.join(
+                current_path,
+                '..',
+                '..'))
+
+        manifest_path = '%s/manifest.json' % (config_path)
+
+        # Load manifest file
+        read_manifest = open(manifest_path).read()
+        manifest_conf = json.dumps(json.loads(read_manifest))
+        manifest_conf = yaml.load(manifest_conf)
+
+        # Get cumputer's tmp directory and creat "tmp_epandage" folder in
+        directories = manifest_conf['directories']
+
         # Directory where will be the temporary GRASS location and where will be (or not) the final layer (shapefile)
-        tmp_dir = '/home/saadni/tmp/tmp_zonage/'
+        tmp_dir = directories['zonage_tmp_dir']
 
         # Creat epandage tmp dirrectory if not exists
         if not os.path.exists(tmp_dir):
             os.makedirs(tmp_dir)
 
         # File indecating the classes and layers directory
-        layers_path = '/home/saadni/layers_pentes/'
+        layers_path = directories['zonage_layers_dir']
 
         # Point to the folder 'scripts' (two folders above 'zonage.py')
-        current_path = os.path.realpath(__file__)
-        scripts_path = os.path.abspath(
+        scripts_path = '%s/' % (os.path.abspath(
             os.path.join(
                 current_path,
                 '..',
                 '..',
-                'scripts')) + '/'
+                'scripts')))
 
         RH_path = layers_path + self.getInputValue('RH_layer')
         SurfaceEau_path = layers_path + self.getInputValue('SurfaceEau_layer')
