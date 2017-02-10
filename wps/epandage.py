@@ -14,7 +14,11 @@ import shlex
 
 
 class Process(WPSProcess):
-
+    """
+    TODO: In the condition, if userData send a "zone epandable plus" (line 642 and 650)
+    The overlay process (line 658 and 685) should dissolve the added polygones with the
+    original polygone (parcelle) to creat one feature instead of two.
+    """
 
     def __init__(self):
 
@@ -48,21 +52,27 @@ class Process(WPSProcess):
                 {
                     "mimeType": "text/plain"}])
 
+        self.distanceEau_0 = self.addLiteralInput(
+            identifier="distanceEau_0",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente moins de 7% a un max de 100m du cours d'eau",
+            default="35",
+            type="")
+
         self.distanceEau_7 = self.addLiteralInput(
             identifier="distanceEau_7",
-            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 7%",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 7% a un max de 100m du cours d'eau",
             default="35",
             type="")
 
         self.distanceEau_10 = self.addLiteralInput(
             identifier="distanceEau_10",
-            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 10%",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 10% a un max de 100m du cours d'eau",
             default="35",
             type="")
 
         self.distanceEau_15 = self.addLiteralInput(
             identifier="distanceEau_15",
-            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 15%",
+            title="Distance minimale (m) du cours d'eau lorsque la valeur de pente >= 15% a un max de 100m du cours d'eau",
             default="100",
             type="")
 
@@ -241,6 +251,7 @@ class Process(WPSProcess):
             if distance[:8] == 'distance':
                 layerDict[key]['distance_att'] = self.getInputValue(distance)
 
+        #LOGGER.info('\n%s\n' % (layerDict))
         #########################################
         # Get Parcelles layer
         #########################################
@@ -567,6 +578,29 @@ class Process(WPSProcess):
                                 (final_out))
 
                             final_out = 'out_overlay_3_2'
+                        except:
+                            pass
+
+                    if self.getInputValue('distanceEau_7') == '100':
+
+                        # v.extract - Selects vector objects from an existing
+                        # vector map and creates a new map containing only the
+                        # selected objects.
+                        grass.run_command(
+                            'v.extract',
+                            quiet=True,
+                            input=slope_input,
+                            output='extracted_1',
+                            where='value = "1"')
+
+                        # v.overlay - Overlays two vector maps - not: features
+                        # from ainput not overlayed by features from binput
+                        try:
+                            self.cmd(
+                                "v.overlay --quiet ainput=%s binput=extracted_1 operator=not output=out_overlay_3_1 olayer=0,1,0" %
+                                (final_out))
+
+                            final_out = 'out_overlay_3_1'
                         except:
                             pass
 
