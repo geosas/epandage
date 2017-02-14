@@ -132,7 +132,7 @@ The file path (string) should be assigned to the variable named __"config_file"_
 __TODO :__
 - On [epandage.py](./wps/epandage.py) in the condition, if userData send a "zone epandable plus" (line 642 and 650) the overlay process (line 658 and 685) should dissolve the added polygones with the original polygone (parcelle) to creat one feature instead of two and don't let the polygone (plus) go out of the "parcelle"..
 
-- Convert the output vector object to mutiPolygones to remove double object on the case when the parcelle polygone is sepatated on two or more polygones after the process.
+- Convert the output vector objects to mutiPolygones to remove double objects on the case when the parcelle polygone is sepatated on two or more polygones after the process.
 
 ## For WPS zonage
 This service allows the generation of the slopes zoning vector layer to be used later in the "epandage" WPS service.
