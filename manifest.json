@@ -1,9 +1,9 @@
 {
     "directories": {
-        "epandage_config_layers" : "/home/saadni/private_conf/epandage_process.conf",
+        "epandage_config_layers" : "/usr/local/epandage/epandage_process.conf",
 	"epandage_tmp_dir" : "/tmp/tmp_epandage/",
-	"zonage_layers_dir" : "/home/saadni/layers_pentes/",
-	"zonage_tmp_dir" : "/home/saadni/tmp/tmp_zonage/"
+	"zonage_layers_dir" : "/tmp/layers_pentes/",
+	"zonage_tmp_dir" : "/tmp/tmp_zonage/"
     },
     "epandage_n_dayes_cash": 1
 }
