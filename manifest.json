@@ -1,6 +1,7 @@
 {
     "directories": {
         "epandage_config_layers" : "/usr/local/epandage/epandage_process.conf",
+        "epandage_parcelle_config_layers" : "/usr/local/epandage/epandage_parcelle_process.conf",
 	"epandage_tmp_dir" : "/tmp/tmp_epandage/",
 	"zonage_layers_dir" : "/tmp/layers_pentes/",
 	"zonage_tmp_dir" : "/tmp/tmp_zonage/"
